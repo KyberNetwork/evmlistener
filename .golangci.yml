@@ -1,0 +1,28 @@
+run:
+  deadline: 5m
+
+linters:
+  enable-all: true
+  disable:
+    - maligned
+    - interfacer
+    - scopelint
+    - gomoddirectives
+    - nolintlint
+    - exhaustivestruct
+    - wrapcheck
+    - varnamelen
+    - golint
+    - paralleltest
+    - wsl
+    - nosnakecase
+    - deadcode
+    - ifshort
+    - varcheck
+    - structcheck
+    - rowserrcheck
+    - sqlclosecheck
+    - wastedassign
+    - exhaustruct
+    - nonamedreturns
+    - testpackage
