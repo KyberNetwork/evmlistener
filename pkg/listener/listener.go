@@ -1,30 +1,32 @@
 package listener
 
 import (
-	"sync"
+	"context"
 
-	"github.com/KyberNetwork/bclistener/pkg/block"
-	"github.com/KyberNetwork/bclistener/pkg/listener/job"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
 )
 
-// Config contains configuration options for listener service.
-type Config struct {
-	MaxNumBlocks    int
-	FilterAddresses map[common.Address]bool // nil for skip filtering.
+// EVMClient is an client for evm used by listener.
+type EVMClient interface {
+	SubscribeNewHead(context.Context, chan<- *types.Header) (ethereum.Subscription, error)
+	FilterLogs(context.Context, ethereum.FilterQuery) ([]types.Log, error)
+	HeaderByHash(context.Context, common.Hash) (*types.Header, error)
 }
 
 // Listener represents a listener service for on-chain events.
 type Listener struct {
-	mu              sync.Mutex              //nolint:unused
-	maxNumBlocks    int                     //nolint:unused
-	filterAddresses map[common.Address]bool //nolint:unused
+	ethClient EVMClient // nolint: unused
+	handler   *Handler  // nolint: unused
+	l         *zap.SugaredLogger
+}
 
-	ethClient    *ethclient.Client  //nolint:unused
-	jobSplitter  job.Splitter       //nolint:unused
-	jobPublisher job.Publisher      //nolint:unused
-	bs           block.Storage      //nolint:unused
-	l            *zap.SugaredLogger //nolint:unused
+// Run listens for new block head and handle it.
+func (l *Listener) Run(ctx context.Context) error {
+	l.l.Info("Start listener service")
+	defer l.l.Info("Stop listener service")
+
+	return nil
 }

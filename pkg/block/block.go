@@ -16,8 +16,8 @@ type Block struct {
 	Logs        []types.Log
 }
 
-// Storage is an interface for interacting with block storage.
-type Storage interface {
+// Keeper is an interface for interacting with block keeper.
+type Keeper interface {
 	Add(b Block) error
 	Exists(hash common.Hash) (bool, error)
 	Head() (Block, error)

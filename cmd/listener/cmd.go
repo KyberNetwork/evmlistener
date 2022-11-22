@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	libapp "github.com/KyberNetwork/bclistener/pkg/app"
+	libapp "github.com/KyberNetwork/evmlistener/pkg/app"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 )

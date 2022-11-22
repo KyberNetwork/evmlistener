@@ -32,7 +32,7 @@ jobs:
     needs:
       - prepare
     env:
-      SERVICE: bclistener
+      SERVICE: evmlistener
       VERSION_TAG: ${{ needs.prepare.outputs.version_tag }}
       BUILD_DATE: ${{ needs.prepare.outputs.build_date }}
     runs-on: [ubuntu-22.04]
