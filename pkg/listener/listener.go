@@ -3,8 +3,8 @@ package listener
 import (
 	"sync"
 
-	"github.com/KyberNetwork/bclistener/pkg/block"
-	"github.com/KyberNetwork/bclistener/pkg/listener/job"
+	"github.com/KyberNetwork/evmlistener/pkg/block"
+	"github.com/KyberNetwork/evmlistener/pkg/listener/job"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"go.uber.org/zap"
