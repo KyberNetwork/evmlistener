@@ -18,6 +18,9 @@ type Block struct {
 
 // Keeper is an interface for interacting with block keeper.
 type Keeper interface {
+	Init() error
+	Len() int
+	Cap() int
 	Add(b Block) error
 	Exists(hash common.Hash) (bool, error)
 	Head() (Block, error)
