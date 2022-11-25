@@ -24,7 +24,7 @@ type Config struct {
 
 // Client ...
 type Client struct {
-	client redis.UniversalClient
+	redis.UniversalClient
 
 	config Config
 }
@@ -48,8 +48,8 @@ func New(cfg Config) (*Client, error) {
 	}
 
 	return &Client{
-		config: cfg,
-		client: client,
+		config:          cfg,
+		UniversalClient: client,
 	}, nil
 }
 
@@ -62,13 +62,13 @@ func (c *Client) Set(ctx context.Context, key string, v interface{}, exp time.Du
 		return err
 	}
 
-	return c.client.Set(ctx, k, data, exp).Err()
+	return c.UniversalClient.Set(ctx, k, data, exp).Err()
 }
 
 // Get ...
 func (c *Client) Get(ctx context.Context, key string, o interface{}) error {
 	k := FormatKey(c.config.Separator, c.config.Prefix, key)
-	data, err := c.client.Get(ctx, k).Result()
+	data, err := c.UniversalClient.Get(ctx, k).Result()
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (c *Client) Get(ctx context.Context, key string, o interface{}) error {
 // Exists ...
 func (c *Client) Exists(ctx context.Context, key string) (bool, error) {
 	k := FormatKey(c.config.Separator, c.config.Prefix, key)
-	res, err := c.client.Exists(ctx, k).Result()
+	res, err := c.UniversalClient.Exists(ctx, k).Result()
 	if err != nil {
 		return false, err
 	}
