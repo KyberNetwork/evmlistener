@@ -54,32 +54,24 @@ func (ts *BaseBlockKeeperTestSuite) TestInit() {
 }
 
 func (ts *BaseBlockKeeperTestSuite) TestLen() {
-	n, err := ts.keeper.Len()
-	if ts.Assert().NoError(err) {
-		ts.Assert().Equal(3, n)
-	}
+	n := ts.keeper.Len()
+	ts.Assert().Equal(3, n)
 }
 
 func (ts *BaseBlockKeeperTestSuite) TestCap() {
-	n, err := ts.keeper.Cap()
-	if ts.Assert().NoError(err) {
-		ts.Assert().Equal(4, n)
-	}
+	n := ts.keeper.Cap()
+	ts.Assert().Equal(4, n)
 }
 
 func (ts *BaseBlockKeeperTestSuite) TestAdd() {
 	keeper := NewBaseBlockKeeper(2)
-	n, err := keeper.Len()
-	if ts.Assert().NoError(err) {
-		ts.Assert().Equal(0, n)
-	}
+	n := keeper.Len()
+	ts.Assert().Equal(0, n)
 
-	err = keeper.Add(sampleBlocks[0])
+	err := keeper.Add(sampleBlocks[0])
 	if ts.Assert().NoError(err) {
-		n, err = keeper.Len()
-		if ts.Assert().NoError(err) {
-			ts.Assert().Equal(1, n)
-		}
+		n = keeper.Len()
+		ts.Assert().Equal(1, n)
 	}
 
 	err = keeper.Add(sampleBlocks[0])
@@ -87,18 +79,14 @@ func (ts *BaseBlockKeeperTestSuite) TestAdd() {
 
 	err = keeper.Add(sampleBlocks[1])
 	if ts.Assert().NoError(err) {
-		n, err = keeper.Len()
-		if ts.Assert().NoError(err) {
-			ts.Assert().Equal(2, n)
-		}
+		n = keeper.Len()
+		ts.Assert().Equal(2, n)
 	}
 
 	err = keeper.Add(sampleBlocks[2])
 	if ts.Assert().NoError(err) {
-		n, err = keeper.Len()
-		if ts.Assert().NoError(err) {
-			ts.Assert().Equal(2, n)
-		}
+		n = keeper.Len()
+		ts.Assert().Equal(2, n)
 	}
 }
 

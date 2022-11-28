@@ -35,17 +35,22 @@ func NewBaseBlockKeeper(maxNumBlocks int) *BaseBlockKeeper {
 
 // Init ...
 func (k *BaseBlockKeeper) Init() error {
+	if len(k.blockMap) > 0 {
+		k.blockMap = make(map[common.Hash]Block, k.maxNumBlocks)
+		k.queue.Clear()
+	}
+
 	return nil
 }
 
 // Len ...
-func (k *BaseBlockKeeper) Len() (int, error) {
-	return len(k.blockMap), nil
+func (k *BaseBlockKeeper) Len() int {
+	return len(k.blockMap)
 }
 
 // Cap ...
-func (k *BaseBlockKeeper) Cap() (int, error) {
-	return k.maxNumBlocks, nil
+func (k *BaseBlockKeeper) Cap() int {
+	return k.maxNumBlocks
 }
 
 func (k *BaseBlockKeeper) exists(hash common.Hash) bool {

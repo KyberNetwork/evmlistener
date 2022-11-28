@@ -2,8 +2,10 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -70,6 +72,10 @@ func (c *Client) Get(ctx context.Context, key string, o interface{}) error {
 	k := FormatKey(c.config.Separator, c.config.Prefix, key)
 	data, err := c.UniversalClient.Get(ctx, k).Result()
 	if err != nil {
+		if err.Error() == "redis: nil" {
+			return fmt.Errorf("key %s: %w", key, errors.ErrNotFound)
+		}
+
 		return err
 	}
 

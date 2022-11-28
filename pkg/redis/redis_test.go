@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -51,7 +52,7 @@ func (ts *ClientTestSuite) TestGet() {
 
 	// Test get for non-exists key.
 	err := ts.c.Get(context.Background(), "non-exists", &s)
-	ts.Require().Error(err)
+	ts.Require().ErrorIs(err, errors.ErrNotFound)
 
 	// Test get for exists key.
 	err = ts.c.Set(context.Background(), "get-1", "test get data", time.Second)
