@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/KyberNetwork/cclog v1.0.1
 	github.com/TheZeroSlave/zapsentry v1.12.0
+	github.com/emirpasic/gods v1.18.1
 	github.com/ethereum/go-ethereum v1.10.26
 	github.com/getsentry/sentry-go v0.15.0
 	github.com/go-redis/redis/v8 v8.11.5

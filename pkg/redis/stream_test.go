@@ -64,7 +64,7 @@ func (ts *StreamTestSuite) TestPublish() {
 		ts.Require().NoError(err)
 		ts.Require().Len(res, 1)
 
-		msg, ok := res[0].Values["message"].(string)
+		msg, ok := res[0].Values[MessageKey].(string)
 		ts.Require().True(ok)
 		ts.Assert().Equal(test.expect, msg)
 	}

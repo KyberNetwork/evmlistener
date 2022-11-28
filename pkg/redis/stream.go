@@ -6,6 +6,10 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
+const (
+	MessageKey = "message"
+)
+
 // Stream represents a redis stream.
 type Stream struct {
 	maxLen int64
@@ -33,6 +37,6 @@ func (s *Stream) Publish(ctx context.Context, topic string, msg interface{}) err
 		MaxLen: s.maxLen,
 		Approx: true,
 		ID:     "*",
-		Values: []string{"message", string(data)},
+		Values: []string{MessageKey, string(data)},
 	}).Err()
 }
