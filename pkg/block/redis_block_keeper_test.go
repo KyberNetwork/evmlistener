@@ -10,6 +10,7 @@ import (
 
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/redis"
+	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
 )
@@ -64,7 +65,7 @@ func (ts *RedisBlockKeeperTestSuite) TestInit() {
 }
 
 func (ts *RedisBlockKeeperTestSuite) TestAdd() {
-	block := Block{
+	block := types.Block{
 		Number:     big.NewInt(35338115),
 		Hash:       common.HexToHash("0xf11b9c19c31319321e6730754f4fe1746f24d1b6ca925d30622059e6a5d79450"),
 		ParentHash: common.HexToHash("0x9a24538f47e0c6faa56732a0c3f1f036bea5372a57369c3ecef1423972957c6a"),

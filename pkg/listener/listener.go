@@ -2,6 +2,7 @@ package listener
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -11,14 +12,16 @@ import (
 
 // EVMClient is an client for evm used by listener.
 type EVMClient interface {
+	BlockNumber(context.Context) (uint64, error)
 	SubscribeNewHead(context.Context, chan<- *types.Header) (ethereum.Subscription, error)
 	FilterLogs(context.Context, ethereum.FilterQuery) ([]types.Log, error)
+	HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
 	HeaderByHash(context.Context, common.Hash) (*types.Header, error)
 }
 
 // Listener represents a listener service for on-chain events.
 type Listener struct {
-	ethClient EVMClient // nolint: unused
+	evmClient EVMClient // nolint: unused
 	handler   *Handler  // nolint: unused
 	l         *zap.SugaredLogger
 }

@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
+	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
 )
 
 // nolint
-var sampleBlocks = []Block{
+var sampleBlocks = []types.Block{
 	{
 		Number:     big.NewInt(35338112),
 		Hash:       common.HexToHash("0x53ba783737c47ed662995b7085ad239478f45a5feb2155d7adefa4dd32e8b8e0"),
@@ -125,7 +126,7 @@ func (ts *BaseBlockKeeperTestSuite) TestGet() {
 	tests := []struct {
 		hash      common.Hash
 		expectErr error
-		expect    Block
+		expect    types.Block
 	}{
 		{
 			hash:      sampleBlocks[0].Hash,
@@ -169,11 +170,11 @@ func (ts *BaseBlockKeeperTestSuite) TestHead() {
 
 func (ts *BaseBlockKeeperTestSuite) TestIsReorg() {
 	tests := []struct {
-		block  Block
+		block  types.Block
 		expect bool
 	}{
 		{
-			block: Block{
+			block: types.Block{
 				Number:     big.NewInt(35338114),
 				Hash:       common.HexToHash("0x29736b68f357f61d0ae3d8b78762949a0b2da1d99b0f4a9be56edd28e7839643"),
 				ParentHash: common.HexToHash("0x37cc554658cd6bb324eaf4861f6661588b8465dbdc29726bbb5caa0a55383362"),
@@ -181,7 +182,7 @@ func (ts *BaseBlockKeeperTestSuite) TestIsReorg() {
 			expect: true,
 		},
 		{
-			block: Block{
+			block: types.Block{
 				Number:     big.NewInt(35338115),
 				Hash:       common.HexToHash("0x29736b68f357f61d0ae3d8b78762949a0b2da1d99b0f4a9be56edd28e7839643"),
 				ParentHash: common.HexToHash("0x9a24538f47e0c6faa56732a0c3f1f036bea5372a57369c3ecef1423972957c6a"),
@@ -202,7 +203,7 @@ func (ts *BaseBlockKeeperTestSuite) TestGetRecentBlocks() {
 	tests := []struct {
 		n      int
 		err    error
-		expect []Block
+		expect []types.Block
 	}{
 		{
 			n:   0,
@@ -211,22 +212,22 @@ func (ts *BaseBlockKeeperTestSuite) TestGetRecentBlocks() {
 		{
 			n:      1,
 			err:    nil,
-			expect: []Block{sampleBlocks[2]},
+			expect: []types.Block{sampleBlocks[2]},
 		},
 		{
 			n:      2,
 			err:    nil,
-			expect: []Block{sampleBlocks[2], sampleBlocks[1]},
+			expect: []types.Block{sampleBlocks[2], sampleBlocks[1]},
 		},
 		{
 			n:      3,
 			err:    nil,
-			expect: []Block{sampleBlocks[2], sampleBlocks[1], sampleBlocks[0]},
+			expect: []types.Block{sampleBlocks[2], sampleBlocks[1], sampleBlocks[0]},
 		},
 		{
 			n:      5,
 			err:    nil,
-			expect: []Block{sampleBlocks[2], sampleBlocks[1], sampleBlocks[0]},
+			expect: []types.Block{sampleBlocks[2], sampleBlocks[1], sampleBlocks[0]},
 		},
 	}
 
