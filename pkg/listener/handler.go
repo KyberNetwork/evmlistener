@@ -97,7 +97,13 @@ func (h *Handler) getBlock(ctx context.Context, hash common.Hash) (types.Block, 
 func (h *Handler) findReorgBlocks(
 	ctx context.Context, storedBlock, newBlock types.Block,
 ) ([]types.Block, []types.Block, error) {
-	h.l.Debugw("Find re-organization blocks", "storedBlock", storedBlock, "newBlock", newBlock)
+	h.l.Debugw("Find re-organization blocks",
+		"oldHash", storedBlock.Hash,
+		"newHash", newBlock.Hash,
+		"oldParentHash", storedBlock.ParentHash,
+		"newParentHash", newBlock.ParentHash,
+		"oldBlockNumber", storedBlock.Number,
+		"newBlockNumber", newBlock.Number)
 
 	reorgBlocks := []types.Block{storedBlock}
 	newBlocks := []types.Block{newBlock}
@@ -164,13 +170,13 @@ func (h *Handler) Handle(ctx context.Context, b types.Block) error {
 
 	exists, err := h.blockKeeper.Exists(b.Hash)
 	if err != nil {
-		log.Errorw("Fail to check exists for block", "error", err)
+		log.Errorw("Fail to check exists for block", "hash", b.Hash, "error", err)
 
 		return err
 	}
 
 	if exists {
-		log.Debugw("Ignore already handled block")
+		log.Debugw("Ignore already handled block", "hash", b.Hash)
 
 		return nil
 	}
@@ -201,6 +207,9 @@ func (h *Handler) Handle(ctx context.Context, b types.Block) error {
 		newBlocks = []types.Block{b}
 	}
 
+	log.Debugw("Publish message to queue",
+		"numRevertedBlocks", len(revertedBlocks),
+		"numNewBlocks", len(newBlocks))
 	msg := types.Message{
 		RevertedBlocks: revertedBlocks,
 		NewBlocks:      newBlocks,
@@ -215,7 +224,7 @@ func (h *Handler) Handle(ctx context.Context, b types.Block) error {
 	// Add new blocks into block keeper.
 	for _, b := range newBlocks {
 		err = h.blockKeeper.Add(b)
-		if err != nil {
+		if err != nil && !errors.Is(err, errors.ErrAlreadyExists) {
 			h.l.Errorw("Fail to add block", "hash", b.Hash, "error", err)
 
 			return err

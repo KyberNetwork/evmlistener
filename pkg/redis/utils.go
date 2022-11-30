@@ -2,7 +2,6 @@ package redis
 
 import (
 	"encoding/json"
-	"strings"
 )
 
 // Encode marshals a data type in go to a slice of bytes.
@@ -16,6 +15,11 @@ func Decode(data []byte, v interface{}) error {
 }
 
 // FormatKey returns a key from a list of strings.
-func FormatKey(sep string, args ...string) string {
-	return strings.Join(args, sep)
+func FormatKey(args ...string) string {
+	var key string
+	for _, arg := range args {
+		key += arg
+	}
+
+	return key
 }

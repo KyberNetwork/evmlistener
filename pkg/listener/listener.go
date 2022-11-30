@@ -26,8 +26,8 @@ type Listener struct {
 	l         *zap.SugaredLogger
 }
 
-// NewListener ...
-func NewListener(evmClient EVMClient, handler *Handler) *Listener {
+// New ...
+func New(evmClient EVMClient, handler *Handler) *Listener {
 	return &Listener{
 		evmClient: evmClient,
 		handler:   handler,
@@ -46,7 +46,7 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (l
 	return headerToBlock(header, logs), nil
 }
 
-func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan ltypes.Block) error {
+func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- ltypes.Block) error {
 	l.l.Info("Start subscribing for new head of the chain")
 	headerCh := make(chan *types.Header, 1)
 	sub, err := l.evmClient.SubscribeNewHead(ctx, headerCh)
@@ -112,7 +112,7 @@ func (l *Listener) Run(ctx context.Context) error {
 	}
 
 	errCh := make(chan error)
-	blockCh := make(chan ltypes.Block, 1)
+	blockCh := make(chan ltypes.Block, 1000)
 	go func() {
 		err := l.syncBlocks(ctx, blockCh)
 		if err != nil {
@@ -126,7 +126,8 @@ func (l *Listener) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case b := <-blockCh:
-			l.l.Debugw("Receive new block", "block", b)
+			l.l.Debugw("Receive new block",
+				"hash", b.Hash, "parent", b.ParentHash, "numLogs", len(b.Logs))
 			err = l.handler.Handle(ctx, b)
 			if err != nil {
 				l.l.Errorw("Fail to handle new block", "hash", b.Hash, "error", err)

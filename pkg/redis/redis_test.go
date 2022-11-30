@@ -18,8 +18,7 @@ type ClientTestSuite struct {
 func (ts *ClientTestSuite) SetupTest() {
 	client, err := New(Config{
 		Addrs:     []string{":6379"},
-		Prefix:    "test",
-		Separator: ":",
+		KeyPrefix: "test:",
 	})
 	if err != nil {
 		panic(err)

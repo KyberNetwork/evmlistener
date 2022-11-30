@@ -18,8 +18,7 @@ type Config struct {
 	Password         string
 	SentinelUsername string
 	SentinelPassword string
-	Prefix           string
-	Separator        string
+	KeyPrefix        string
 	ReadTimeout      time.Duration
 	WriteTimeout     time.Duration
 }
@@ -57,7 +56,7 @@ func New(cfg Config) (*Client, error) {
 
 // Set ...
 func (c *Client) Set(ctx context.Context, key string, v interface{}, exp time.Duration) error {
-	k := FormatKey(c.config.Separator, c.config.Prefix, key)
+	k := FormatKey(c.config.KeyPrefix, key)
 
 	data, err := Encode(v)
 	if err != nil {
@@ -69,7 +68,7 @@ func (c *Client) Set(ctx context.Context, key string, v interface{}, exp time.Du
 
 // Get ...
 func (c *Client) Get(ctx context.Context, key string, o interface{}) error {
-	k := FormatKey(c.config.Separator, c.config.Prefix, key)
+	k := FormatKey(c.config.KeyPrefix, key)
 	data, err := c.UniversalClient.Get(ctx, k).Result()
 	if err != nil {
 		if err.Error() == "redis: nil" {
@@ -84,7 +83,7 @@ func (c *Client) Get(ctx context.Context, key string, o interface{}) error {
 
 // Exists ...
 func (c *Client) Exists(ctx context.Context, key string) (bool, error) {
-	k := FormatKey(c.config.Separator, c.config.Prefix, key)
+	k := FormatKey(c.config.KeyPrefix, key)
 	res, err := c.UniversalClient.Exists(ctx, k).Result()
 	if err != nil {
 		return false, err
