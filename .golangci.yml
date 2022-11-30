@@ -26,3 +26,9 @@ linters:
     - exhaustruct
     - nonamedreturns
     - testpackage
+    - tagliatelle
+
+linters-settings:
+  funlen:
+    lines: 90
+    statements: 60

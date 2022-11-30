@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
+	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/emirpasic/gods/queues/circularbuffer"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -14,7 +15,7 @@ type BaseBlockKeeper struct {
 	mu           sync.RWMutex
 	maxNumBlocks int
 	head         common.Hash
-	blockMap     map[common.Hash]Block
+	blockMap     map[common.Hash]types.Block
 	queue        *circularbuffer.Queue
 }
 
@@ -28,7 +29,7 @@ func NewBaseBlockKeeper(maxNumBlocks int) *BaseBlockKeeper {
 		mu:           sync.RWMutex{},
 		maxNumBlocks: maxNumBlocks,
 		head:         common.Hash{},
-		blockMap:     make(map[common.Hash]Block, maxNumBlocks),
+		blockMap:     make(map[common.Hash]types.Block, maxNumBlocks),
 		queue:        circularbuffer.New(maxNumBlocks),
 	}
 }
@@ -36,7 +37,7 @@ func NewBaseBlockKeeper(maxNumBlocks int) *BaseBlockKeeper {
 // Init ...
 func (k *BaseBlockKeeper) Init() error {
 	if len(k.blockMap) > 0 {
-		k.blockMap = make(map[common.Hash]Block, k.maxNumBlocks)
+		k.blockMap = make(map[common.Hash]types.Block, k.maxNumBlocks)
 		k.queue.Clear()
 	}
 
@@ -82,7 +83,7 @@ func (k *BaseBlockKeeper) removeOld() {
 }
 
 // Add adds new block to the keeper.
-func (k *BaseBlockKeeper) Add(block Block) error {
+func (k *BaseBlockKeeper) Add(block types.Block) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
@@ -110,24 +111,24 @@ func (k *BaseBlockKeeper) Add(block Block) error {
 }
 
 // Head returns the block head of the chain on the keeper.
-func (k *BaseBlockKeeper) Head() (Block, error) {
+func (k *BaseBlockKeeper) Head() (types.Block, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
 	return k.Get(k.head)
 }
 
-func (k *BaseBlockKeeper) get(hash common.Hash) (Block, error) {
+func (k *BaseBlockKeeper) get(hash common.Hash) (types.Block, error) {
 	block, ok := k.blockMap[hash]
 	if !ok {
-		return Block{}, fmt.Errorf("block %v: %w", hash, errors.ErrNotFound)
+		return types.Block{}, fmt.Errorf("block %v: %w", hash, errors.ErrNotFound)
 	}
 
 	return block, nil
 }
 
 // Get returns a block for given hash.
-func (k *BaseBlockKeeper) Get(hash common.Hash) (Block, error) {
+func (k *BaseBlockKeeper) Get(hash common.Hash) (types.Block, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
@@ -135,7 +136,7 @@ func (k *BaseBlockKeeper) Get(hash common.Hash) (Block, error) {
 }
 
 // IsReorg returns true if the chain was re-orged when add new block to it.
-func (k *BaseBlockKeeper) IsReorg(block Block) (bool, error) {
+func (k *BaseBlockKeeper) IsReorg(block types.Block) (bool, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
@@ -143,7 +144,7 @@ func (k *BaseBlockKeeper) IsReorg(block Block) (bool, error) {
 }
 
 // GetRecentBlocks returns a list of recent blocks in descending order.
-func (k *BaseBlockKeeper) GetRecentBlocks(n int) ([]Block, error) {
+func (k *BaseBlockKeeper) GetRecentBlocks(n int) ([]types.Block, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
@@ -155,7 +156,7 @@ func (k *BaseBlockKeeper) GetRecentBlocks(n int) ([]Block, error) {
 		n = len(k.blockMap)
 	}
 
-	blocks := make([]Block, 0, n)
+	blocks := make([]types.Block, 0, n)
 	hash := k.head
 	for i := 0; i < n; i++ {
 		block, ok := k.blockMap[hash]

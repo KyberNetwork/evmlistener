@@ -7,6 +7,7 @@ import (
 
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/redis"
+	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/zap"
 )
@@ -54,9 +55,9 @@ func (k *RedisBlockKeeper) Init() error {
 
 	// Get recent blocks from redis.
 	n := k.BaseBlockKeeper.Cap()
-	blocks := make([]Block, 0, n)
+	blocks := make([]types.Block, 0, n)
 	for i := 0; i < n; i++ {
-		var block Block
+		var block types.Block
 		err = k.redisClient.Get(context.Background(), hash.String(), &block)
 		if err != nil {
 			if errors.Is(err, errors.ErrNotFound) {
@@ -94,7 +95,7 @@ func (k *RedisBlockKeeper) Init() error {
 }
 
 // Add adds new block to the keeper and store it into redis.
-func (k *RedisBlockKeeper) Add(block Block) error {
+func (k *RedisBlockKeeper) Add(block types.Block) error {
 	// Check if block was already stored in the keeper.
 	exists, err := k.BaseBlockKeeper.Exists(block.Hash)
 	if err != nil {
