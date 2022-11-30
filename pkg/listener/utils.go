@@ -35,6 +35,14 @@ func getLogs(
 	return logs, nil
 }
 
+func getLogsByBlockHash(
+	ctx context.Context, evmClient EVMClient, hash common.Hash,
+) ([]types.Log, error) {
+	return evmClient.FilterLogs(ctx, ethereum.FilterQuery{
+		BlockHash: &hash,
+	})
+}
+
 func getBlocks(
 	ctx context.Context, evmClient EVMClient, fromBlock uint64, toBlock uint64,
 ) ([]ltypes.Block, error) {
@@ -42,16 +50,6 @@ func getBlocks(
 	logs, err := getLogs(ctx, evmClient, fromBlock, toBlock)
 	if err != nil {
 		return nil, err
-	}
-
-	if len(logs) > 1 {
-		sort.Slice(logs, func(i, j int) bool {
-			if logs[i].BlockNumber == logs[j].BlockNumber {
-				return logs[i].Index < logs[j].Index
-			}
-
-			return logs[i].BlockNumber < logs[j].BlockNumber
-		})
 	}
 
 	blockLogsMap := make(map[common.Hash][]types.Log)
@@ -69,12 +67,7 @@ func getBlocks(
 			return nil, err
 		}
 
-		blocks = append(blocks, ltypes.Block{
-			Number:     header.Number,
-			Hash:       hash,
-			ParentHash: header.ParentHash,
-			Logs:       logs,
-		})
+		blocks = append(blocks, headerToBlock(header, logs))
 	}
 
 	sort.Slice(blocks, func(i, j int) bool {
@@ -92,15 +85,19 @@ func getBlockByHash(
 		return ltypes.Block{}, err
 	}
 
-	logs, err := evmClient.FilterLogs(ctx, ethereum.FilterQuery{BlockHash: &hash})
+	logs, err := getLogsByBlockHash(ctx, evmClient, hash)
 	if err != nil {
 		return ltypes.Block{}, err
 	}
 
+	return headerToBlock(header, logs), nil
+}
+
+func headerToBlock(header *types.Header, logs []types.Log) ltypes.Block {
 	return ltypes.Block{
 		Number:     header.Number,
-		Hash:       hash,
+		Hash:       header.Hash(),
 		ParentHash: header.ParentHash,
 		Logs:       logs,
-	}, nil
+	}
 }

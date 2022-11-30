@@ -37,6 +37,7 @@ func NewHandler(
 
 // Init ...
 func (h *Handler) Init(ctx context.Context) error {
+	h.l.Info("Init block keeper")
 	err := h.blockKeeper.Init()
 	if err != nil {
 		h.l.Errorw("Fail to initialize block keeper", "error", err)

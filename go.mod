@@ -9,6 +9,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.26
 	github.com/getsentry/sentry-go v0.15.0
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/gorilla/websocket v1.4.2
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.0
 	github.com/urfave/cli v1.22.10
