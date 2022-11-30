@@ -2,7 +2,6 @@ package listener
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -15,7 +14,6 @@ type EVMClient interface {
 	BlockNumber(context.Context) (uint64, error)
 	SubscribeNewHead(context.Context, chan<- *types.Header) (ethereum.Subscription, error)
 	FilterLogs(context.Context, ethereum.FilterQuery) ([]types.Log, error)
-	HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
 	HeaderByHash(context.Context, common.Hash) (*types.Header, error)
 }
 

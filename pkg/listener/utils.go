@@ -63,20 +63,23 @@ func getBlocks(
 
 	// Get block headers.
 	blocks := make([]ltypes.Block, 0, int(toBlock-fromBlock+1))
-	for i := fromBlock; i <= toBlock; i++ {
-		header, err := evmClient.HeaderByNumber(ctx, new(big.Int).SetUint64(i))
+	for hash, logs := range blockLogsMap {
+		header, err := evmClient.HeaderByHash(ctx, hash)
 		if err != nil {
 			return nil, err
 		}
 
-		hash := header.Hash()
 		blocks = append(blocks, ltypes.Block{
 			Number:     header.Number,
 			Hash:       hash,
 			ParentHash: header.ParentHash,
-			Logs:       blockLogsMap[hash],
+			Logs:       logs,
 		})
 	}
+
+	sort.Slice(blocks, func(i, j int) bool {
+		return blocks[i].Number.Cmp(blocks[j].Number) < 0
+	})
 
 	return blocks, nil
 }
