@@ -57,7 +57,7 @@ func (h *Handler) Init(ctx context.Context) error {
 		return err
 	}
 
-	fromBlock := toBlock - uint64(h.blockKeeper.Cap())
+	fromBlock := toBlock - uint64(h.blockKeeper.Cap()) - 1
 
 	h.l.Infow("Get blocks from node", "from", fromBlock, "to", toBlock)
 	blocks, err := getBlocks(ctx, h.evmClient, fromBlock, toBlock)
@@ -196,7 +196,7 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 	}
 	err = h.publisher.Publish(ctx, h.topic, msg)
 	if err != nil {
-		log.Errorw("Fail to publish message", "msg", msg, "error", err)
+		log.Errorw("Fail to publish message", "error", err)
 
 		return err
 	}
