@@ -75,8 +75,8 @@ jobs:
             kyber.network.version=${{ env.VERSION_TAG }}
             kyber.network.name=${{ env.SERVICE }}
           tags: |
-            asia.gcr.io/kyber-operation/foundation/trading/${{ env.SERVICE }}:latest
-            asia.gcr.io/kyber-operation/foundation/trading/${{ env.SERVICE }}:${{ env.VERSION_TAG }}
+            asia.gcr.io/kyber-operation/core/${{ env.SERVICE }}:latest
+            asia.gcr.io/kyber-operation/core/${{ env.SERVICE }}:${{ env.VERSION_TAG }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
 
