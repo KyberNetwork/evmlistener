@@ -113,31 +113,27 @@ func (l *Listener) Run(ctx context.Context) error {
 		return err
 	}
 
-	errCh := make(chan error)
 	blockCh := make(chan ltypes.Block, bufLen)
 	go func() {
 		err := l.syncBlocks(ctx, blockCh)
 		if err != nil {
-			errCh <- err
+			l.l.Fatalw("Fail to sync blocks", "error", err)
 		}
+
+		close(blockCh)
 	}()
 
 	l.l.Info("Start handling for new blocks")
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case b := <-blockCh:
-			l.l.Debugw("Receive new block",
-				"hash", b.Hash, "parent", b.ParentHash, "numLogs", len(b.Logs))
-			err = l.handler.Handle(ctx, b)
-			if err != nil {
-				l.l.Errorw("Fail to handle new block", "hash", b.Hash, "error", err)
-			}
-		case err = <-errCh:
-			l.l.Errorw("Fail to synchronize blocks from node", "error", err)
+	for b := range blockCh {
+		l.l.Debugw("Receive new block",
+			"hash", b.Hash, "parent", b.ParentHash, "numLogs", len(b.Logs))
+		err = l.handler.Handle(ctx, b)
+		if err != nil {
+			l.l.Errorw("Fail to handle new block", "hash", b.Hash, "error", err)
 
 			return err
 		}
 	}
+
+	return nil
 }
