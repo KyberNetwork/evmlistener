@@ -37,6 +37,7 @@ func NewHandler(
 
 // Init ...
 func (h *Handler) Init(ctx context.Context) error {
+	h.l.Info("Init block keeper")
 	err := h.blockKeeper.Init()
 	if err != nil {
 		h.l.Errorw("Fail to initialize block keeper", "error", err)
@@ -96,7 +97,13 @@ func (h *Handler) getBlock(ctx context.Context, hash common.Hash) (types.Block, 
 func (h *Handler) findReorgBlocks(
 	ctx context.Context, storedBlock, newBlock types.Block,
 ) ([]types.Block, []types.Block, error) {
-	h.l.Debugw("Find re-organization blocks", "storedBlock", storedBlock, "newBlock", newBlock)
+	h.l.Debugw("Find re-organization blocks",
+		"oldHash", storedBlock.Hash,
+		"newHash", newBlock.Hash,
+		"oldParentHash", storedBlock.ParentHash,
+		"newParentHash", newBlock.ParentHash,
+		"oldBlockNumber", storedBlock.Number,
+		"newBlockNumber", newBlock.Number)
 
 	reorgBlocks := []types.Block{storedBlock}
 	newBlocks := []types.Block{newBlock}
@@ -154,25 +161,11 @@ func (h *Handler) handleReorgBlock(
 	return h.findReorgBlocks(ctx, head, b)
 }
 
-// Handle ...
-func (h *Handler) Handle(ctx context.Context, b types.Block) error {
+func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 	log := h.l.With(
 		"blockNumber", b.Number, "blockHash", b.Hash,
 		"parentHash", b.ParentHash, "numLogs", len(b.Logs),
 	)
-
-	exists, err := h.blockKeeper.Exists(b.Hash)
-	if err != nil {
-		log.Errorw("Fail to check exists for block", "error", err)
-
-		return err
-	}
-
-	if exists {
-		log.Debugw("Ignore already handled block")
-
-		return nil
-	}
 
 	isReorg, err := h.blockKeeper.IsReorg(b)
 	if err != nil {
@@ -191,15 +184,12 @@ func (h *Handler) Handle(ctx context.Context, b types.Block) error {
 			return err
 		}
 	} else {
-		if err != nil {
-			log.Errorw("Fail to store new block", "error", err)
-
-			return err
-		}
-
 		newBlocks = []types.Block{b}
 	}
 
+	log.Debugw("Publish message to queue",
+		"numRevertedBlocks", len(revertedBlocks),
+		"numNewBlocks", len(newBlocks))
 	msg := types.Message{
 		RevertedBlocks: revertedBlocks,
 		NewBlocks:      newBlocks,
@@ -214,7 +204,7 @@ func (h *Handler) Handle(ctx context.Context, b types.Block) error {
 	// Add new blocks into block keeper.
 	for _, b := range newBlocks {
 		err = h.blockKeeper.Add(b)
-		if err != nil {
+		if err != nil && !errors.Is(err, errors.ErrAlreadyExists) {
 			h.l.Errorw("Fail to add block", "hash", b.Hash, "error", err)
 
 			return err
@@ -222,4 +212,27 @@ func (h *Handler) Handle(ctx context.Context, b types.Block) error {
 	}
 
 	return nil
+}
+
+// Handle ...
+func (h *Handler) Handle(ctx context.Context, b types.Block) error {
+	log := h.l.With(
+		"blockNumber", b.Number, "blockHash", b.Hash,
+		"parentHash", b.ParentHash, "numLogs", len(b.Logs),
+	)
+
+	exists, err := h.blockKeeper.Exists(b.Hash)
+	if err != nil {
+		log.Errorw("Fail to check exists for block", "hash", b.Hash, "error", err)
+
+		return err
+	}
+
+	if exists {
+		log.Debugw("Ignore already handled block", "hash", b.Hash)
+
+		return nil
+	}
+
+	return h.handleNewBlock(ctx, b)
 }

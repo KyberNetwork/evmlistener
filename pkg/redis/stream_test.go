@@ -19,8 +19,7 @@ type StreamTestSuite struct {
 func (ts *StreamTestSuite) SetupTest() {
 	client, err := New(Config{
 		Addrs:     []string{":6379"},
-		Prefix:    "test",
-		Separator: ":",
+		KeyPrefix: "test:",
 	})
 	if err != nil {
 		panic(err)
