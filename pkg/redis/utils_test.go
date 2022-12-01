@@ -30,7 +30,7 @@ func TestFormatKey(t *testing.T) {
 			expect: "prefix-key:123456",
 		},
 		{
-			args:   []string{"prefix_key:", "654321"},
+			args:   []string{"prefix_key-", "654321"},
 			expect: "prefix_key-654321",
 		},
 	}

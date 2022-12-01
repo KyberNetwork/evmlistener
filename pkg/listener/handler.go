@@ -161,25 +161,11 @@ func (h *Handler) handleReorgBlock(
 	return h.findReorgBlocks(ctx, head, b)
 }
 
-// Handle ...
-func (h *Handler) Handle(ctx context.Context, b types.Block) error {
+func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 	log := h.l.With(
 		"blockNumber", b.Number, "blockHash", b.Hash,
 		"parentHash", b.ParentHash, "numLogs", len(b.Logs),
 	)
-
-	exists, err := h.blockKeeper.Exists(b.Hash)
-	if err != nil {
-		log.Errorw("Fail to check exists for block", "hash", b.Hash, "error", err)
-
-		return err
-	}
-
-	if exists {
-		log.Debugw("Ignore already handled block", "hash", b.Hash)
-
-		return nil
-	}
 
 	isReorg, err := h.blockKeeper.IsReorg(b)
 	if err != nil {
@@ -198,12 +184,6 @@ func (h *Handler) Handle(ctx context.Context, b types.Block) error {
 			return err
 		}
 	} else {
-		if err != nil {
-			log.Errorw("Fail to store new block", "error", err)
-
-			return err
-		}
-
 		newBlocks = []types.Block{b}
 	}
 
@@ -232,4 +212,27 @@ func (h *Handler) Handle(ctx context.Context, b types.Block) error {
 	}
 
 	return nil
+}
+
+// Handle ...
+func (h *Handler) Handle(ctx context.Context, b types.Block) error {
+	log := h.l.With(
+		"blockNumber", b.Number, "blockHash", b.Hash,
+		"parentHash", b.ParentHash, "numLogs", len(b.Logs),
+	)
+
+	exists, err := h.blockKeeper.Exists(b.Hash)
+	if err != nil {
+		log.Errorw("Fail to check exists for block", "hash", b.Hash, "error", err)
+
+		return err
+	}
+
+	if exists {
+		log.Debugw("Ignore already handled block", "hash", b.Hash)
+
+		return nil
+	}
+
+	return h.handleNewBlock(ctx, b)
 }

@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const bufLen = 10000
+
 // EVMClient is an client for evm used by listener.
 type EVMClient interface {
 	BlockNumber(context.Context) (uint64, error)
@@ -112,7 +114,7 @@ func (l *Listener) Run(ctx context.Context) error {
 	}
 
 	errCh := make(chan error)
-	blockCh := make(chan ltypes.Block, 1000)
+	blockCh := make(chan ltypes.Block, bufLen)
 	go func() {
 		err := l.syncBlocks(ctx, blockCh)
 		if err != nil {
