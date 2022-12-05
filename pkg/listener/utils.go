@@ -14,7 +14,7 @@ import (
 func getLogs(
 	ctx context.Context, evmClient EVMClient, fromBlock uint64, toBlock uint64,
 ) (logs []types.Log, err error) {
-	const step = 32
+	const step = 16
 	for i := fromBlock; i <= toBlock; i += step {
 		e := i + step - 1
 		if e > toBlock {
