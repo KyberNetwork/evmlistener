@@ -61,8 +61,8 @@ func getBlocks(
 
 	// Get block headers.
 	blocks := make([]ltypes.Block, 0, int(toBlock-fromBlock+1))
-	for hash, logs := range blockLogsMap {
-		header, err := evmClient.HeaderByHash(ctx, hash)
+	for i := fromBlock; i <= toBlock; i++ {
+		header, err := evmClient.HeaderByNumber(ctx, new(big.Int).SetUint64(i))
 		if err != nil {
 			return nil, err
 		}
