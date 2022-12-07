@@ -2,6 +2,7 @@ package listener
 
 import (
 	"context"
+	"math/big"
 
 	ltypes "github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/ethereum/go-ethereum"
@@ -19,6 +20,7 @@ type EVMClient interface {
 	SubscribeNewHead(context.Context, chan<- *types.Header) (ethereum.Subscription, error)
 	FilterLogs(context.Context, ethereum.FilterQuery) ([]types.Log, error)
 	HeaderByHash(context.Context, common.Hash) (*types.Header, error)
+	HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
 }
 
 // Listener represents a listener service for on-chain events.

@@ -105,38 +105,40 @@ func (h *Handler) findReorgBlocks(
 		"oldBlockNumber", storedBlock.Number,
 		"newBlockNumber", newBlock.Number)
 
-	reorgBlocks := []types.Block{storedBlock}
-	newBlocks := []types.Block{newBlock}
+	var err error
+	var reorgBlocks, newBlocks []types.Block
 	storedNumber := storedBlock.Number.Uint64()
 	newNumber := newBlock.Number.Uint64()
 
-	for !bytes.Equal(storedBlock.ParentHash.Bytes(), newBlock.ParentHash.Bytes()) {
+	for {
 		if storedNumber >= newNumber {
-			tmp, err := h.blockKeeper.Get(storedBlock.ParentHash)
+			reorgBlocks = append(reorgBlocks, storedBlock)
+			storedBlock, err = h.blockKeeper.Get(storedBlock.ParentHash)
 			if err != nil {
 				h.l.Errorw("Fail to get stored block",
-					"hash", storedBlock.ParentHash, "error", err)
+					"number", storedNumber, "error", err)
 
 				return nil, nil, err
 			}
 
-			storedBlock = tmp
 			storedNumber--
-			reorgBlocks = append(reorgBlocks, storedBlock)
 		}
 
 		if newNumber > storedNumber {
-			tmp, err := h.getBlock(ctx, newBlock.ParentHash)
+			newBlocks = append(newBlocks, newBlock)
+			newBlock, err = h.getBlock(ctx, newBlock.ParentHash)
 			if err != nil {
 				h.l.Errorw("Fail to get new block",
-					"hash", newBlock.ParentHash, "error", err)
+					"number", newNumber, "error", err)
 
 				return nil, nil, err
 			}
 
-			newBlock = tmp
 			newNumber--
-			newBlocks = append(newBlocks, newBlock)
+		}
+
+		if bytes.Equal(storedBlock.Hash.Bytes(), newBlock.Hash.Bytes()) {
+			break
 		}
 	}
 
