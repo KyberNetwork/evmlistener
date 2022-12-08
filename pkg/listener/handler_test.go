@@ -32,36 +32,36 @@ func (ts *HandlerTestSuite) SetupTest() {
 	}
 
 	ts.evmClient = evmClient
-	ts.blockKeeper = block.NewBaseBlockKeeper(128)
+	ts.blockKeeper = block.NewBaseBlockKeeper(32)
 	ts.publisher = NewPublisherMock(1000)
 	ts.handler = NewHandler("test-topic", ts.evmClient, ts.blockKeeper, ts.publisher)
 }
 
 func (ts *HandlerTestSuite) TestInit() {
-	ts.evmClient.SetHead(130)
-	blockKeeper := NewBlockKeeperMock(128)
+	ts.evmClient.SetHead(34)
+	blockKeeper := NewBlockKeeperMock(32)
 	handler := NewHandler("test-topic", ts.evmClient, blockKeeper, ts.publisher)
 
 	// Init handler without saved data.
 	err := handler.Init(context.Background())
 	if ts.Assert().NoError(err) {
-		ts.Assert().Equal(128, blockKeeper.Len())
+		ts.Assert().Equal(32, blockKeeper.Len())
 	}
 
 	// Init handler with saved data.
-	blocks, err := blockKeeper.GetRecentBlocks(64)
+	blocks, err := blockKeeper.GetRecentBlocks(16)
 	ts.Require().NoError(err)
 	blockKeeper.SetInitData(blocks)
 
 	err = handler.Init(context.Background())
 	if ts.Assert().NoError(err) {
-		ts.Assert().Equal(64, blockKeeper.Len())
+		ts.Assert().Equal(16, blockKeeper.Len())
 	}
 }
 
 //nolint
 func (ts *HandlerTestSuite) TestHandle() {
-	ts.evmClient.SetHead(140)
+	ts.evmClient.SetHead(44)
 
 	err := ts.handler.Init(context.Background())
 	ts.Require().NoError(err)
@@ -92,7 +92,7 @@ func (ts *HandlerTestSuite) TestHandle() {
 	ts.Assert().Equal(len(b.Logs), len(msg.NewBlocks[0].Logs))
 
 	// Handle for far away block (lost connection).
-	ts.evmClient.SetHead(148)
+	ts.evmClient.SetHead(52)
 	hash = common.HexToHash("0x132c1eb1799a5219b055674177ba95e946feb5f011c7c1409630d42c0581ee52")
 	b, err = getBlockByHash(context.Background(), ts.evmClient, hash)
 	ts.Require().NoError(err)
@@ -131,7 +131,7 @@ func (ts *HandlerTestSuite) TestHandle() {
 	ts.Assert().Equal(len(b.Logs), len(msg.NewBlocks[0].Logs))
 
 	// Handle for re-org block plus missing block.
-	ts.evmClient.SetHead(150)
+	ts.evmClient.SetHead(54)
 	err = ts.handler.Init(context.Background())
 	ts.Require().NoError(err)
 
