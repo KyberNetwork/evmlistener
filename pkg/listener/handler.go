@@ -57,7 +57,7 @@ func (h *Handler) Init(ctx context.Context) error {
 		return err
 	}
 
-	fromBlock := toBlock - uint64(h.blockKeeper.Cap()) - 1
+	fromBlock := toBlock - uint64(h.blockKeeper.Cap()) + 1
 
 	h.l.Infow("Get blocks from node", "from", fromBlock, "to", toBlock)
 	blocks, err := getBlocks(ctx, h.evmClient, fromBlock, toBlock)

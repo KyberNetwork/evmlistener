@@ -3,37 +3,12 @@ package listener
 import (
 	"context"
 	"math/big"
-	"sort"
 
 	ltypes "github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
-
-func getLogs(
-	ctx context.Context, evmClient EVMClient, fromBlock uint64, toBlock uint64,
-) (logs []types.Log, err error) {
-	const step = 16
-	for i := fromBlock; i <= toBlock; i += step {
-		e := i + step - 1
-		if e > toBlock {
-			e = toBlock
-		}
-
-		newLogs, err := evmClient.FilterLogs(ctx, ethereum.FilterQuery{
-			FromBlock: new(big.Int).SetUint64(i),
-			ToBlock:   new(big.Int).SetUint64(e),
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		logs = append(logs, newLogs...)
-	}
-
-	return logs, nil
-}
 
 func getLogsByBlockHash(
 	ctx context.Context, evmClient EVMClient, hash common.Hash,
@@ -46,33 +21,26 @@ func getLogsByBlockHash(
 func getBlocks(
 	ctx context.Context, evmClient EVMClient, fromBlock uint64, toBlock uint64,
 ) ([]ltypes.Block, error) {
-	// Get events for blocks.
-	logs, err := getLogs(ctx, evmClient, fromBlock, toBlock)
+	// Get latest block by number.
+	b, err := getBlockByNumber(ctx, evmClient, new(big.Int).SetUint64(toBlock))
 	if err != nil {
 		return nil, err
 	}
 
-	blockLogsMap := make(map[common.Hash][]types.Log)
-	for _, log := range logs {
-		blockLogs := blockLogsMap[log.BlockHash]
-		blockLogs = append(blockLogs, log)
-		blockLogsMap[log.BlockHash] = blockLogs
-	}
+	// Get block headers and its logs.
+	n := int(toBlock - fromBlock + 1)
+	blocks := make([]ltypes.Block, n)
+	blocks[n-1] = b
 
-	// Get block headers.
-	blocks := make([]ltypes.Block, 0, int(toBlock-fromBlock+1))
-	for i := fromBlock; i <= toBlock; i++ {
-		header, err := evmClient.HeaderByNumber(ctx, new(big.Int).SetUint64(i))
+	hash := b.ParentHash
+	for i := n - 2; i >= 0; i-- { //nolint:gomnd
+		b, err = getBlockByHash(ctx, evmClient, hash)
 		if err != nil {
 			return nil, err
 		}
-
-		blocks = append(blocks, headerToBlock(header, logs))
+		blocks[i] = b
+		hash = b.ParentHash
 	}
-
-	sort.Slice(blocks, func(i, j int) bool {
-		return blocks[i].Number.Cmp(blocks[j].Number) < 0
-	})
 
 	return blocks, nil
 }
@@ -86,6 +54,22 @@ func getBlockByHash(
 	}
 
 	logs, err := getLogsByBlockHash(ctx, evmClient, hash)
+	if err != nil {
+		return ltypes.Block{}, err
+	}
+
+	return headerToBlock(header, logs), nil
+}
+
+func getBlockByNumber(
+	ctx context.Context, evmClient EVMClient, num *big.Int,
+) (ltypes.Block, error) {
+	header, err := evmClient.HeaderByNumber(ctx, num)
+	if err != nil {
+		return ltypes.Block{}, err
+	}
+
+	logs, err := getLogsByBlockHash(ctx, evmClient, header.Hash())
 	if err != nil {
 		return ltypes.Block{}, err
 	}

@@ -44,7 +44,7 @@ func NewEVMClientMock(dataFile string) (*EVMClientMock, error) {
 	}
 
 	return &EVMClientMock{
-		head:      128, //nolint
+		head:      0, //nolint
 		sequence:  data.HeadSequence,
 		headerMap: data.HeaderMap,
 		logsMap:   data.LogsMap,
