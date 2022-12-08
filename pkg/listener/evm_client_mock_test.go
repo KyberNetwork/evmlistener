@@ -7,18 +7,31 @@ import (
 	"io"
 	"math/big"
 	"os"
+	"sync"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+type ClientSubscription struct {
+	errCh chan error
+}
+
+func (s *ClientSubscription) Err() <-chan error {
+	return s.errCh
+}
+
+func (s *ClientSubscription) Unsubscribe() {}
+
 type EVMClientMock struct {
+	mu         sync.Mutex
 	head       int
 	sequence   []common.Hash
 	headerMap  map[common.Hash]*types.Header
 	logsMap    map[common.Hash][]types.Log
 	subHeadChs []chan<- *types.Header
+	subs       []*ClientSubscription
 }
 
 func NewEVMClientMock(dataFile string) (*EVMClientMock, error) {
@@ -52,6 +65,9 @@ func NewEVMClientMock(dataFile string) (*EVMClientMock, error) {
 }
 
 func (c *EVMClientMock) Next() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	c.head++
 
 	// Publish new head for subscriptions.
@@ -64,27 +80,26 @@ func (c *EVMClientMock) Next() {
 }
 
 func (c *EVMClientMock) SetHead(index int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	c.head = index
 }
 
 func (c *EVMClientMock) BlockNumber(ctx context.Context) (uint64, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	header := c.headerMap[c.sequence[c.head]]
 
 	return header.Number.Uint64(), nil
 }
 
-type ClientSubscription struct {
-	errCh chan error
-}
-
-func (s *ClientSubscription) Err() <-chan error {
-	return s.errCh
-}
-
-func (s *ClientSubscription) Unsubscribe() {}
-
 //nolint
 func (c *EVMClientMock) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	c.subHeadChs = append(c.subHeadChs, ch)
 
 	// Publish current head to the channel.
@@ -93,11 +108,17 @@ func (c *EVMClientMock) SubscribeNewHead(ctx context.Context, ch chan<- *types.H
 		ch <- header
 	}()
 
-	return &ClientSubscription{errCh: make(chan error)}, nil
+	sub := &ClientSubscription{errCh: make(chan error)}
+	c.subs = append(c.subs, sub)
+
+	return sub, nil
 }
 
 //nolint
 func (c *EVMClientMock) FilterLogs(ctx context.Context, filter ethereum.FilterQuery) (logs []types.Log, err error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if filter.BlockHash != nil {
 		logs = c.logsMap[*filter.BlockHash]
 	} else {
@@ -172,6 +193,9 @@ func (c *EVMClientMock) FilterLogs(ctx context.Context, filter ethereum.FilterQu
 }
 
 func (c *EVMClientMock) HeaderByNumber(ctx context.Context, num *big.Int) (*types.Header, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	var ok bool
 
 	header := c.headerMap[c.sequence[c.head]]
@@ -193,10 +217,24 @@ func (c *EVMClientMock) HeaderByNumber(ctx context.Context, num *big.Int) (*type
 }
 
 func (c *EVMClientMock) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	header, ok := c.headerMap[hash]
 	if !ok {
 		return nil, errors.New("header not found") //nolint
 	}
 
 	return header, nil
+}
+
+func (c *EVMClientMock) NotifyDisconnect(err error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for _, sub := range c.subs {
+		go func(sub *ClientSubscription) {
+			sub.errCh <- err
+		}(sub)
+	}
 }
