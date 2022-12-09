@@ -85,7 +85,8 @@ func (k *RedisBlockKeeper) Init() error {
 		block := blocks[i]
 		err = k.BaseBlockKeeper.Add(block)
 		if err != nil {
-			k.l.Errorw("Fail to store block on memory", "block", block, "error", err)
+			k.l.Errorw("Fail to store block on memory",
+				"hash", block.Hash, "error", err)
 
 			return err
 		}
@@ -111,7 +112,7 @@ func (k *RedisBlockKeeper) Add(block types.Block) error {
 	// Store new block and new head into redis.
 	err = k.redisClient.Set(context.Background(), block.Hash.String(), block, k.expiration)
 	if err != nil {
-		k.l.Errorw("Fail to store block into redis", "block", block, "error", err)
+		k.l.Errorw("Fail to store block into redis", "hash", block.Hash, "error", err)
 
 		return err
 	}
