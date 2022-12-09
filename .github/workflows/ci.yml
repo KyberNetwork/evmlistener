@@ -80,6 +80,8 @@ jobs:
         with:
           version: v1.50.1
           args: --config=.golangci.yml
+          skip-pkg-cache: true
+          skip-build-cache: true
 
   test:
     runs-on: [ubuntu-22.04]
