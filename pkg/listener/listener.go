@@ -3,7 +3,9 @@ package listener
 import (
 	"context"
 	"math/big"
+	"syscall"
 
+	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	ltypes "github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -93,8 +95,8 @@ func (l *Listener) syncBlocks(ctx context.Context, blockCh chan ltypes.Block) er
 
 		l.l.Errorw("Fail to subscribe new block head", "error", err)
 		if !websocket.IsCloseError(err, websocket.CloseAbnormalClosure,
-			websocket.CloseNormalClosure, websocket.CloseServiceRestart,
-		) {
+			websocket.CloseNormalClosure, websocket.CloseServiceRestart) &&
+			!errors.Is(err, syscall.ECONNRESET) {
 			return err
 		}
 
