@@ -11,6 +11,7 @@ import (
 type Block struct {
 	Number      *big.Int    `json:"number"`
 	Hash        common.Hash `json:"hash"`
+	Timestamp   uint64      `json:"timestamp"`
 	ParentHash  common.Hash `json:"parentHash"`
 	ReorgedHash common.Hash `json:"reorgedHash"`
 	Logs        []types.Log `json:"logs"`

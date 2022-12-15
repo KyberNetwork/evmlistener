@@ -81,6 +81,7 @@ func headerToBlock(header *types.Header, logs []types.Log) ltypes.Block {
 	return ltypes.Block{
 		Number:     header.Number,
 		Hash:       header.Hash(),
+		Timestamp:  header.Time,
 		ParentHash: header.ParentHash,
 		Logs:       logs,
 	}
