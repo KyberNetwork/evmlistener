@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - main
+      - release
       - ci
   pull_request:
     branches:
@@ -106,7 +107,7 @@ jobs:
     if: 
       contains('
         refs/heads/main
-        refs/heads/develop
+        refs/heads/release
       ', github.ref)
     runs-on: [ubuntu-22.04]
     needs:
