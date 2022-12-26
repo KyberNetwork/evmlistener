@@ -104,7 +104,7 @@ jobs:
         run: go test -race -v ./...
 
   build:
-    if: 
+    if:
       contains('
         refs/heads/main
         refs/heads/release
