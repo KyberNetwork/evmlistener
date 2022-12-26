@@ -11,6 +11,8 @@ on:
       - main
       - release
       - ci
+    tags:
+      - "v*"
   pull_request:
     branches:
       - "*"
