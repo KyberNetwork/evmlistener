@@ -11,7 +11,7 @@ git clone git@github.com:KyberNetwork/evmlistener.git
 cd evmlistener
 ```
 
-Create environment file with following content:
+Create environment file with following content, `listener.env`:
 
 ```sh
 export NODE_RPC="wss://polygon.kyberengineering.io"
@@ -45,5 +45,6 @@ docker-compose up -d
 Run service:
 
 ```sh
+source listener.env
 go run ./cmd/listener/main.go
 ```
