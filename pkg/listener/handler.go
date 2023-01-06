@@ -24,14 +24,15 @@ type Handler struct {
 
 // NewHandler ...
 func NewHandler(
-	topic string, evmClient EVMClient, blockKeeper block.Keeper, publisher pubsub.Publisher,
+	l *zap.SugaredLogger, topic string, evmClient EVMClient,
+	blockKeeper block.Keeper, publisher pubsub.Publisher,
 ) *Handler {
 	return &Handler{
 		topic:       topic,
 		evmClient:   evmClient,
 		blockKeeper: blockKeeper,
 		publisher:   publisher,
-		l:           zap.S(),
+		l:           l,
 	}
 }
 

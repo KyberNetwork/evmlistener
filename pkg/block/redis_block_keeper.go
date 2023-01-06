@@ -28,12 +28,12 @@ type RedisBlockKeeper struct {
 
 // NewRedisBlockKeeper ...
 func NewRedisBlockKeeper(
-	client *redis.Client, maxNumBlocks int, expiration time.Duration,
+	l *zap.SugaredLogger, client *redis.Client, maxNumBlocks int, expiration time.Duration,
 ) *RedisBlockKeeper {
 	return &RedisBlockKeeper{
 		expiration:      expiration,
 		redisClient:     client,
-		l:               zap.S(),
+		l:               l,
 		BaseBlockKeeper: NewBaseBlockKeeper(maxNumBlocks),
 	}
 }
