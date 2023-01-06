@@ -126,3 +126,16 @@ func (k *RedisBlockKeeper) Add(block types.Block) error {
 
 	return k.BaseBlockKeeper.Add(block)
 }
+
+// Get ...
+func (k *RedisBlockKeeper) Get(hash common.Hash) (b types.Block, err error) {
+	b, err = k.BaseBlockKeeper.Get(hash)
+	if !errors.Is(err, errors.ErrNotFound) {
+		return b, err
+	}
+
+	k.l.Debugw("Look up block from redis", "hash", hash)
+	err = k.redisClient.Get(context.Background(), hash.String(), &b)
+
+	return b, err
+}
