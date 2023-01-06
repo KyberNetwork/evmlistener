@@ -13,6 +13,7 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap"
 )
 
 type RedisBlockKeeperTestSuite struct {
@@ -34,7 +35,7 @@ func (ts *RedisBlockKeeperTestSuite) SetupTest() {
 		panic(err)
 	}
 
-	keeper := NewRedisBlockKeeper(redisClient, 4, time.Second)
+	keeper := NewRedisBlockKeeper(zap.S(), redisClient, 4, time.Second)
 
 	ts.redisClient = redisClient
 	ts.keeper = keeper

@@ -33,8 +33,8 @@ func (ts *ListenerTestSuite) SetupTest() {
 	ts.evmClient = evmClient
 	ts.publisher = NewPublisherMock(1000)
 	blockKeeper := block.NewBaseBlockKeeper(32)
-	handler := NewHandler("test-topic", ts.evmClient, blockKeeper, ts.publisher)
-	ts.listener = New(evmClient, handler)
+	handler := NewHandler(zap.S(), "test-topic", ts.evmClient, blockKeeper, ts.publisher)
+	ts.listener = New(zap.S(), evmClient, handler)
 }
 
 func (ts *ListenerTestSuite) TestRun() {
