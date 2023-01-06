@@ -170,6 +170,8 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 		"parentHash", b.ParentHash, "numLogs", len(b.Logs),
 	)
 
+	log.Infow("Handling new block")
+
 	isReorg, err := h.blockKeeper.IsReorg(b)
 	if err != nil {
 		log.Errorw("Fail to check for re-organization", "error", err)
@@ -190,7 +192,7 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 		newBlocks = []types.Block{b}
 	}
 
-	log.Debugw("Publish message to queue",
+	log.Infow("Publish message to queue",
 		"numRevertedBlocks", len(revertedBlocks),
 		"numNewBlocks", len(newBlocks))
 	msg := types.Message{
