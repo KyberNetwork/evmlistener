@@ -24,14 +24,15 @@ type Handler struct {
 
 // NewHandler ...
 func NewHandler(
-	topic string, evmClient EVMClient, blockKeeper block.Keeper, publisher pubsub.Publisher,
+	l *zap.SugaredLogger, topic string, evmClient EVMClient,
+	blockKeeper block.Keeper, publisher pubsub.Publisher,
 ) *Handler {
 	return &Handler{
 		topic:       topic,
 		evmClient:   evmClient,
 		blockKeeper: blockKeeper,
 		publisher:   publisher,
-		l:           zap.S(),
+		l:           l,
 	}
 }
 
@@ -169,6 +170,8 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 		"parentHash", b.ParentHash, "numLogs", len(b.Logs),
 	)
 
+	log.Infow("Handling new block")
+
 	isReorg, err := h.blockKeeper.IsReorg(b)
 	if err != nil {
 		log.Errorw("Fail to check for re-organization", "error", err)
@@ -189,7 +192,7 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 		newBlocks = []types.Block{b}
 	}
 
-	log.Debugw("Publish message to queue",
+	log.Infow("Publish message to queue",
 		"numRevertedBlocks", len(revertedBlocks),
 		"numNewBlocks", len(newBlocks))
 	msg := types.Message{

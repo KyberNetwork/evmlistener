@@ -71,7 +71,7 @@ func (c *Client) Get(ctx context.Context, key string, o interface{}) error {
 	k := FormatKey(c.config.KeyPrefix, key)
 	data, err := c.UniversalClient.Get(ctx, k).Result()
 	if err != nil {
-		if err.Error() == "redis: nil" {
+		if errors.Is(err, redis.Nil) {
 			return fmt.Errorf("key %s: %w", key, errors.ErrNotFound)
 		}
 

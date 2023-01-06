@@ -33,11 +33,11 @@ type Listener struct {
 }
 
 // New ...
-func New(evmClient EVMClient, handler *Handler) *Listener {
+func New(l *zap.SugaredLogger, evmClient EVMClient, handler *Handler) *Listener {
 	return &Listener{
 		evmClient: evmClient,
 		handler:   handler,
-		l:         zap.S(),
+		l:         l,
 	}
 }
 
