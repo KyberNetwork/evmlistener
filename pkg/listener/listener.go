@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"syscall"
+	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	ltypes "github.com/KyberNetwork/evmlistener/pkg/types"
@@ -14,7 +15,12 @@ import (
 	"go.uber.org/zap"
 )
 
-const bufLen = 10000
+const (
+	bufLen           = 10000
+	rpcRetryInterval = 100 * time.Millisecond
+
+	errStringUnknownBlock = "unknown block"
+)
 
 // EVMClient is an client for evm used by listener.
 type EVMClient interface {
@@ -42,7 +48,24 @@ func New(l *zap.SugaredLogger, evmClient EVMClient, handler *Handler) *Listener 
 }
 
 func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (ltypes.Block, error) {
-	logs, err := getLogsByBlockHash(ctx, l.evmClient, header.Hash())
+	var err error
+	var logs []types.Log
+
+	// retry up to 3 times before give up.
+	for i := 0; i < 3; i++ {
+		logs, err = getLogsByBlockHash(ctx, l.evmClient, header.Hash())
+		if err == nil {
+			break
+		}
+
+		if err.Error() != errStringUnknownBlock {
+			break
+		}
+
+		l.l.Infow("Retry get logs by block hash", "hash", header.Hash(), "error", err)
+		time.Sleep(rpcRetryInterval)
+	}
+
 	if err != nil {
 		l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash(), "error", err)
 
