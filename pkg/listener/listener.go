@@ -54,16 +54,22 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (l
 	// retry up to 3 times before give up.
 	for i := 0; i < 3; i++ {
 		logs, err = getLogsByBlockHash(ctx, l.evmClient, header.Hash())
-		if err != nil {
-			l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash(), "error", err)
-
-			if err.Error() != errStringUnknownBlock {
-				return ltypes.Block{}, err
-			}
-
-			l.l.Infow("Retry for getting logs by block hash", "hash", header.Hash())
-			time.Sleep(rpcRetryInterval)
+		if err == nil {
+			break
 		}
+
+		if err.Error() != errStringUnknownBlock {
+			break
+		}
+
+		l.l.Infow("Retry get logs by block hash", "hash", header.Hash(), "error", err)
+		time.Sleep(rpcRetryInterval)
+	}
+
+	if err != nil {
+		l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash(), "error", err)
+
+		return ltypes.Block{}, err
 	}
 
 	return headerToBlock(header, logs), nil
