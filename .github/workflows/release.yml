@@ -10,7 +10,7 @@ on:
 
 jobs:
   prepare:
-    runs-on: [ubuntu-22.04]
+    runs-on: [self-hosted]
     outputs:
       version_tag: ${{ steps.version_tag.outputs.value }}
       build_date: ${{ steps.build_date.outputs.value }}
@@ -35,7 +35,7 @@ jobs:
       SERVICE: evmlistener
       VERSION_TAG: ${{ needs.prepare.outputs.version_tag }}
       BUILD_DATE: ${{ needs.prepare.outputs.build_date }}
-    runs-on: [ubuntu-22.04]
+    runs-on: [self-hosted]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -89,7 +89,7 @@ jobs:
     needs:
       - prepare
       - docker
-    runs-on: [ubuntu-22.04]
+    runs-on: [self-hosted]
     env:
       VERSION_TAG: ${{ needs.prepare.outputs.version_tag }}
     steps:
