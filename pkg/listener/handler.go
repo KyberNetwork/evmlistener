@@ -193,6 +193,7 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 	}
 
 	log.Infow("Publish message to queue",
+		"topic", h.topic,
 		"numRevertedBlocks", len(revertedBlocks),
 		"numNewBlocks", len(newBlocks))
 	msg := types.Message{

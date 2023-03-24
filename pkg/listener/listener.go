@@ -18,8 +18,6 @@ import (
 const (
 	bufLen           = 10000
 	rpcRetryInterval = 100 * time.Millisecond
-
-	errStringUnknownBlock = "unknown block"
 )
 
 // EVMClient is an client for evm used by listener.

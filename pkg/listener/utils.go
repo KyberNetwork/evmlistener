@@ -10,12 +10,24 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+const errStringUnknownBlock = "unknown block"
+
+// getLogsByBlockHash returns logs by block hash, retry up to 3 times.
 func getLogsByBlockHash(
 	ctx context.Context, evmClient EVMClient, hash common.Hash,
-) ([]types.Log, error) {
-	return evmClient.FilterLogs(ctx, ethereum.FilterQuery{
-		BlockHash: &hash,
-	})
+) (logs []types.Log, err error) {
+	for i := 0; i < 3; i++ {
+		logs, err = evmClient.FilterLogs(ctx, ethereum.FilterQuery{BlockHash: &hash})
+		if err == nil {
+			return logs, nil
+		}
+
+		if err.Error() != errStringUnknownBlock {
+			return nil, err
+		}
+	}
+
+	return nil, err
 }
 
 func getBlocks(
@@ -45,10 +57,27 @@ func getBlocks(
 	return blocks, nil
 }
 
+func getHeaderByHash(
+	ctx context.Context, evmClient EVMClient, hash common.Hash,
+) (header *types.Header, err error) {
+	for i := 0; i < 3; i++ {
+		header, err = evmClient.HeaderByHash(ctx, hash)
+		if err == nil {
+			return header, nil
+		}
+
+		if err.Error() != errStringUnknownBlock {
+			return nil, err
+		}
+	}
+
+	return nil, err
+}
+
 func getBlockByHash(
 	ctx context.Context, evmClient EVMClient, hash common.Hash,
 ) (ltypes.Block, error) {
-	header, err := evmClient.HeaderByHash(ctx, hash)
+	header, err := getHeaderByHash(ctx, evmClient, hash)
 	if err != nil {
 		return ltypes.Block{}, err
 	}
@@ -61,10 +90,27 @@ func getBlockByHash(
 	return headerToBlock(header, logs), nil
 }
 
+func getHeaderByNumber(
+	ctx context.Context, evmClient EVMClient, num *big.Int,
+) (header *types.Header, err error) {
+	for i := 0; i < 3; i++ {
+		header, err = evmClient.HeaderByNumber(ctx, num)
+		if err == nil {
+			return header, nil
+		}
+
+		if err.Error() != errStringUnknownBlock {
+			return nil, err
+		}
+	}
+
+	return nil, err
+}
+
 func getBlockByNumber(
 	ctx context.Context, evmClient EVMClient, num *big.Int,
 ) (ltypes.Block, error) {
-	header, err := evmClient.HeaderByNumber(ctx, num)
+	header, err := getHeaderByNumber(ctx, evmClient, num)
 	if err != nil {
 		return ltypes.Block{}, err
 	}
