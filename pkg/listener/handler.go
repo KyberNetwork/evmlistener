@@ -8,7 +8,7 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/pubsub"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/fantom-foundation/go-ethereum/common"
 	"go.uber.org/zap"
 )
 
@@ -58,6 +58,7 @@ func (h *Handler) Init(ctx context.Context) error {
 		return err
 	}
 
+	toBlock = 58264256
 	fromBlock := toBlock - uint64(h.blockKeeper.Cap()) + 1
 
 	h.l.Infow("Get blocks from node", "from", fromBlock, "to", toBlock)

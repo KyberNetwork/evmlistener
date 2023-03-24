@@ -2,32 +2,18 @@ package listener
 
 import (
 	"context"
-	"math/big"
 	"syscall"
-	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	ltypes "github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/fantom-foundation/go-ethereum/core/types"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
 const (
-	bufLen           = 10000
-	rpcRetryInterval = 100 * time.Millisecond
+	bufLen = 10000
 )
-
-// EVMClient is an client for evm used by listener.
-type EVMClient interface {
-	BlockNumber(context.Context) (uint64, error)
-	SubscribeNewHead(context.Context, chan<- *types.Header) (ethereum.Subscription, error)
-	FilterLogs(context.Context, ethereum.FilterQuery) ([]types.Log, error)
-	HeaderByHash(context.Context, common.Hash) (*types.Header, error)
-	HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
-}
 
 // Listener represents a listener service for on-chain events.
 type Listener struct {
@@ -49,21 +35,7 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (l
 	var err error
 	var logs []types.Log
 
-	// retry up to 3 times before give up.
-	for i := 0; i < 3; i++ {
-		logs, err = getLogsByBlockHash(ctx, l.evmClient, header.Hash())
-		if err == nil {
-			break
-		}
-
-		if err.Error() != errStringUnknownBlock {
-			break
-		}
-
-		l.l.Infow("Retry get logs by block hash", "hash", header.Hash(), "error", err)
-		time.Sleep(rpcRetryInterval)
-	}
-
+	logs, err = getLogsByBlockHash(ctx, l.evmClient, header.Hash())
 	if err != nil {
 		l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash(), "error", err)
 
@@ -131,14 +103,14 @@ func (l *Listener) Run(ctx context.Context) error {
 	defer l.l.Info("Stop listener service")
 
 	blockCh := make(chan ltypes.Block, bufLen)
-	go func() {
-		err := l.syncBlocks(ctx, blockCh)
-		if err != nil {
-			l.l.Fatalw("Fail to sync blocks", "error", err)
-		}
+	//go func() {
+	//	err := l.syncBlocks(ctx, blockCh)
+	//	if err != nil {
+	//		l.l.Fatalw("Fail to sync blocks", "error", err)
+	//	}
 
-		close(blockCh)
-	}()
+	//	close(blockCh)
+	//}()
 
 	l.l.Info("Init handler")
 	err := l.handler.Init(ctx)
