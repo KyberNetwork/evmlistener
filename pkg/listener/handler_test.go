@@ -6,7 +6,6 @@ import (
 
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	ltypes "github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 )
@@ -59,7 +58,7 @@ func (ts *HandlerTestSuite) TestInit() {
 	}
 }
 
-//nolint
+// nolint
 func (ts *HandlerTestSuite) TestHandle() {
 	ts.evmClient.SetHead(44)
 
@@ -76,7 +75,7 @@ func (ts *HandlerTestSuite) TestHandle() {
 
 	// Handle for normal block (chain was not re-organized).
 	ts.evmClient.Next()
-	hash := common.HexToHash("0xc0c29448be86bca9d0db94b79cd1a6bd1361aed1e394d3a2a218fb98b159ab74")
+	hash := "0xc0c29448be86bca9d0db94b79cd1a6bd1361aed1e394d3a2a218fb98b159ab74"
 	b, err = getBlockByHash(context.Background(), ts.evmClient, hash)
 	ts.Require().NoError(err)
 
@@ -88,12 +87,12 @@ func (ts *HandlerTestSuite) TestHandle() {
 	ts.Require().True(ok)
 	ts.Require().Equal(0, len(msg.RevertedBlocks))
 	ts.Require().Equal(1, len(msg.NewBlocks))
-	ts.Assert().Equal(b.Hash.String(), msg.NewBlocks[0].Hash.String())
+	ts.Assert().Equal(b.Hash, msg.NewBlocks[0].Hash)
 	ts.Assert().Equal(len(b.Logs), len(msg.NewBlocks[0].Logs))
 
 	// Handle for far away block (lost connection).
 	ts.evmClient.SetHead(52)
-	hash = common.HexToHash("0x132c1eb1799a5219b055674177ba95e946feb5f011c7c1409630d42c0581ee52")
+	hash = "0x132c1eb1799a5219b055674177ba95e946feb5f011c7c1409630d42c0581ee52"
 	b, err = getBlockByHash(context.Background(), ts.evmClient, hash)
 	ts.Require().NoError(err)
 
@@ -105,7 +104,7 @@ func (ts *HandlerTestSuite) TestHandle() {
 	ts.Require().True(ok)
 	ts.Require().Equal(0, len(msg.RevertedBlocks))
 	ts.Require().Equal(7, len(msg.NewBlocks))
-	ts.Assert().Equal(b.Hash.String(), msg.NewBlocks[6].Hash.String())
+	ts.Assert().Equal(b.Hash, msg.NewBlocks[6].Hash)
 	ts.Assert().Equal(len(b.Logs), len(msg.NewBlocks[6].Logs))
 
 	// Handle for re-org block.
@@ -113,7 +112,7 @@ func (ts *HandlerTestSuite) TestHandle() {
 	head, err := ts.blockKeeper.Head()
 	ts.Require().NoError(err)
 
-	hash = common.HexToHash("0xfe5db0e13993eb721f8174edc783e92dcee70e5a2eb3cd87e8b6c7ba5ab24986")
+	hash = "0xfe5db0e13993eb721f8174edc783e92dcee70e5a2eb3cd87e8b6c7ba5ab24986"
 	b, err = getBlockByHash(context.Background(), ts.evmClient, hash)
 	ts.Require().NoError(err)
 
@@ -125,9 +124,9 @@ func (ts *HandlerTestSuite) TestHandle() {
 	ts.Require().True(ok)
 	ts.Require().Equal(1, len(msg.RevertedBlocks))
 	ts.Require().Equal(1, len(msg.NewBlocks))
-	ts.Assert().Equal(head.Hash.String(), msg.RevertedBlocks[0].Hash.String())
+	ts.Assert().Equal(head.Hash, msg.RevertedBlocks[0].Hash)
 	ts.Assert().Equal(len(head.Logs), len(msg.RevertedBlocks[0].Logs))
-	ts.Assert().Equal(b.Hash.String(), msg.NewBlocks[0].Hash.String())
+	ts.Assert().Equal(b.Hash, msg.NewBlocks[0].Hash)
 	ts.Assert().Equal(len(b.Logs), len(msg.NewBlocks[0].Logs))
 
 	// Handle for re-org block plus missing block.
@@ -139,7 +138,7 @@ func (ts *HandlerTestSuite) TestHandle() {
 	ts.Require().NoError(err)
 
 	ts.evmClient.Next()
-	hash = common.HexToHash("0x2394b0b03959156ec90096deadd34f68195a8d8f5f1e5438ea237be7675178c2")
+	hash = "0x2394b0b03959156ec90096deadd34f68195a8d8f5f1e5438ea237be7675178c2"
 	b, err = getBlockByHash(context.Background(), ts.evmClient, hash)
 	ts.Require().NoError(err)
 
@@ -151,9 +150,9 @@ func (ts *HandlerTestSuite) TestHandle() {
 	ts.Require().True(ok)
 	ts.Require().Equal(2, len(msg.RevertedBlocks))
 	ts.Require().Equal(2, len(msg.NewBlocks))
-	ts.Assert().Equal(head.Hash.String(), msg.RevertedBlocks[0].Hash.String())
+	ts.Assert().Equal(head.Hash, msg.RevertedBlocks[0].Hash)
 	ts.Assert().Equal(len(head.Logs), len(msg.RevertedBlocks[0].Logs))
-	ts.Assert().Equal(b.Hash.String(), msg.NewBlocks[1].Hash.String())
+	ts.Assert().Equal(b.Hash, msg.NewBlocks[1].Hash)
 	ts.Assert().Equal(len(b.Logs), len(msg.NewBlocks[1].Logs))
 }
 

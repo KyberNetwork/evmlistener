@@ -5,9 +5,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/fantom-foundation/go-ethereum"
-	"go.uber.org/zap"
 )
 
 const (
@@ -18,33 +17,26 @@ const (
 
 // getLogsByBlockHash returns logs by block hash, retry up to 3 times.
 func getLogsByBlockHash(
-	ctx context.Context, evmClient EVMClient, hash string,
+	ctx context.Context, evmClient evmclient.IClient, hash string,
 ) (logs []types.Log, err error) {
-	l := zap.S().With("hash", hash)
-
 	for i := 0; i < 3; i++ {
-		logs, err = evmClient.FilterLogs(ctx, ethereum.FilterQuery{BlockHash: &hash})
+		logs, err = evmClient.FilterLogs(ctx, evmclient.FilterQuery{BlockHash: &hash})
 		if err == nil {
 			return logs, nil
 		}
 
 		if err.Error() != errStringUnknownBlock {
-			l.Errorw("Fail to get logs by block hash", "error", err)
-
 			return nil, err
 		}
 
 		time.Sleep(defaultRetryInterval)
-		zap.S().Infow("Retry get logs")
 	}
-
-	l.Errorw("Fail to get logs by block hash", "error", err)
 
 	return nil, err
 }
 
 func getBlocks(
-	ctx context.Context, evmClient EVMClient, fromBlock uint64, toBlock uint64,
+	ctx context.Context, evmClient evmclient.IClient, fromBlock uint64, toBlock uint64,
 ) ([]types.Block, error) {
 	// Get latest block by number.
 	b, err := getBlockByNumber(ctx, evmClient, new(big.Int).SetUint64(toBlock))
@@ -71,7 +63,7 @@ func getBlocks(
 }
 
 func getHeaderByHash(
-	ctx context.Context, evmClient EVMClient, hash string,
+	ctx context.Context, evmClient evmclient.IClient, hash string,
 ) (header *types.Header, err error) {
 	for i := 0; i < 3; i++ {
 		header, err = evmClient.HeaderByHash(ctx, hash)
@@ -84,14 +76,13 @@ func getHeaderByHash(
 		}
 
 		time.Sleep(defaultRetryInterval)
-		zap.S().Infow("Retry get header by hash")
 	}
 
 	return nil, err
 }
 
 func getBlockByHash(
-	ctx context.Context, evmClient EVMClient, hash string,
+	ctx context.Context, evmClient evmclient.IClient, hash string,
 ) (types.Block, error) {
 	header, err := getHeaderByHash(ctx, evmClient, hash)
 	if err != nil {
@@ -107,7 +98,7 @@ func getBlockByHash(
 }
 
 func getHeaderByNumber(
-	ctx context.Context, evmClient EVMClient, num *big.Int,
+	ctx context.Context, evmClient evmclient.IClient, num *big.Int,
 ) (header *types.Header, err error) {
 	for i := 0; i < 3; i++ {
 		header, err = evmClient.HeaderByNumber(ctx, num)
@@ -120,23 +111,20 @@ func getHeaderByNumber(
 		}
 
 		time.Sleep(defaultRetryInterval)
-		zap.S().Infow("Retry get header by number")
 	}
 
 	return nil, err
 }
 
 func getBlockByNumber(
-	ctx context.Context, evmClient EVMClient, num *big.Int,
+	ctx context.Context, evmClient evmclient.IClient, num *big.Int,
 ) (types.Block, error) {
 	header, err := getHeaderByNumber(ctx, evmClient, num)
 	if err != nil {
 		return types.Block{}, err
 	}
 
-	zap.S().Infow("Block information", "header", header)
-
-	logs, err := getLogsByBlockHash(ctx, evmClient, header.Hash())
+	logs, err := getLogsByBlockHash(ctx, evmClient, header.Hash)
 	if err != nil {
 		return types.Block{}, err
 	}
@@ -144,10 +132,10 @@ func getBlockByNumber(
 	return headerToBlock(header, logs), nil
 }
 
-func headerToBlock(header *types.Header, logs []Log) types.Block {
+func headerToBlock(header *types.Header, logs []types.Log) types.Block {
 	return types.Block{
-		Number:     header.Number,
 		Hash:       header.Hash,
+		Number:     header.Number,
 		Timestamp:  header.Time,
 		ParentHash: header.ParentHash,
 		Logs:       logs,
