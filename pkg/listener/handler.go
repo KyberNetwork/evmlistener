@@ -1,14 +1,13 @@
 package listener
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
+	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/pubsub"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/zap"
 )
 
@@ -16,7 +15,7 @@ import (
 type Handler struct {
 	topic string
 
-	evmClient   EVMClient
+	evmClient   evmclient.IClient
 	blockKeeper block.Keeper
 	publisher   pubsub.Publisher
 	l           *zap.SugaredLogger
@@ -24,7 +23,7 @@ type Handler struct {
 
 // NewHandler ...
 func NewHandler(
-	l *zap.SugaredLogger, topic string, evmClient EVMClient,
+	l *zap.SugaredLogger, topic string, evmClient evmclient.IClient,
 	blockKeeper block.Keeper, publisher pubsub.Publisher,
 ) *Handler {
 	return &Handler{
@@ -82,7 +81,7 @@ func (h *Handler) Init(ctx context.Context) error {
 }
 
 // getBlock returns block from block keeper or fetch from evm client.
-func (h *Handler) getBlock(ctx context.Context, hash common.Hash) (types.Block, error) {
+func (h *Handler) getBlock(ctx context.Context, hash string) (types.Block, error) {
 	b, err := h.blockKeeper.Get(hash)
 	if err == nil {
 		return b, nil
@@ -138,7 +137,7 @@ func (h *Handler) findReorgBlocks(
 			newNumber--
 		}
 
-		if bytes.Equal(storedBlock.Hash.Bytes(), newBlock.Hash.Bytes()) {
+		if storedBlock.Hash == newBlock.Hash {
 			break
 		}
 	}
@@ -193,6 +192,7 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 	}
 
 	log.Infow("Publish message to queue",
+		"topic", h.topic,
 		"numRevertedBlocks", len(revertedBlocks),
 		"numNewBlocks", len(newBlocks))
 	msg := types.Message{

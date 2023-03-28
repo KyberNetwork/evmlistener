@@ -6,7 +6,6 @@ import (
 
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -14,18 +13,18 @@ import (
 var sampleBlocks = []types.Block{
 	{
 		Number:     big.NewInt(35338112),
-		Hash:       common.HexToHash("0x53ba783737c47ed662995b7085ad239478f45a5feb2155d7adefa4dd32e8b8e0"),
-		ParentHash: common.HexToHash("0x2b32f19f1a6e3c6dbeb7354159a845b991f659b46c0c77718981623c4f0a0abf"),
+		Hash:       "0x53ba783737c47ed662995b7085ad239478f45a5feb2155d7adefa4dd32e8b8e0",
+		ParentHash: "0x2b32f19f1a6e3c6dbeb7354159a845b991f659b46c0c77718981623c4f0a0abf",
 	},
 	{
 		Number:     big.NewInt(35338113),
-		Hash:       common.HexToHash("0x37cc554658cd6bb324eaf4861f6661588b8465dbdc29726bbb5caa0a55383362"),
-		ParentHash: common.HexToHash("0x53ba783737c47ed662995b7085ad239478f45a5feb2155d7adefa4dd32e8b8e0"),
+		Hash:       "0x37cc554658cd6bb324eaf4861f6661588b8465dbdc29726bbb5caa0a55383362",
+		ParentHash: "0x53ba783737c47ed662995b7085ad239478f45a5feb2155d7adefa4dd32e8b8e0",
 	},
 	{
 		Number:     big.NewInt(35338114),
-		Hash:       common.HexToHash("0x9a24538f47e0c6faa56732a0c3f1f036bea5372a57369c3ecef1423972957c6a"),
-		ParentHash: common.HexToHash("0x37cc554658cd6bb324eaf4861f6661588b8465dbdc29726bbb5caa0a55383362"),
+		Hash:       "0x9a24538f47e0c6faa56732a0c3f1f036bea5372a57369c3ecef1423972957c6a",
+		ParentHash: "0x37cc554658cd6bb324eaf4861f6661588b8465dbdc29726bbb5caa0a55383362",
 	},
 }
 
@@ -93,7 +92,7 @@ func (ts *BaseBlockKeeperTestSuite) TestAdd() {
 
 func (ts *BaseBlockKeeperTestSuite) TestExists() {
 	tests := []struct {
-		hash   common.Hash
+		hash   string
 		expect bool
 	}{
 		{
@@ -109,7 +108,7 @@ func (ts *BaseBlockKeeperTestSuite) TestExists() {
 			expect: true,
 		},
 		{
-			hash:   common.Hash{},
+			hash:   "",
 			expect: false,
 		},
 	}
@@ -124,7 +123,7 @@ func (ts *BaseBlockKeeperTestSuite) TestExists() {
 
 func (ts *BaseBlockKeeperTestSuite) TestGet() {
 	tests := []struct {
-		hash      common.Hash
+		hash      string
 		expectErr error
 		expect    types.Block
 	}{
@@ -144,7 +143,7 @@ func (ts *BaseBlockKeeperTestSuite) TestGet() {
 			expect:    sampleBlocks[2],
 		},
 		{
-			hash:      common.Hash{},
+			hash:      "",
 			expectErr: errors.ErrNotFound,
 		},
 	}
@@ -176,16 +175,16 @@ func (ts *BaseBlockKeeperTestSuite) TestIsReorg() {
 		{
 			block: types.Block{
 				Number:     big.NewInt(35338114),
-				Hash:       common.HexToHash("0x29736b68f357f61d0ae3d8b78762949a0b2da1d99b0f4a9be56edd28e7839643"),
-				ParentHash: common.HexToHash("0x37cc554658cd6bb324eaf4861f6661588b8465dbdc29726bbb5caa0a55383362"),
+				Hash:       "0x29736b68f357f61d0ae3d8b78762949a0b2da1d99b0f4a9be56edd28e7839643",
+				ParentHash: "0x37cc554658cd6bb324eaf4861f6661588b8465dbdc29726bbb5caa0a55383362",
 			},
 			expect: true,
 		},
 		{
 			block: types.Block{
 				Number:     big.NewInt(35338115),
-				Hash:       common.HexToHash("0x29736b68f357f61d0ae3d8b78762949a0b2da1d99b0f4a9be56edd28e7839643"),
-				ParentHash: common.HexToHash("0x9a24538f47e0c6faa56732a0c3f1f036bea5372a57369c3ecef1423972957c6a"),
+				Hash:       "0x29736b68f357f61d0ae3d8b78762949a0b2da1d99b0f4a9be56edd28e7839643",
+				ParentHash: "0x9a24538f47e0c6faa56732a0c3f1f036bea5372a57369c3ecef1423972957c6a",
 			},
 			expect: false,
 		},
