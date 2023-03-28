@@ -4,19 +4,6 @@ import (
 	"math/big"
 )
 
-// Log contains log information.
-type Log struct {
-	Address     string   `json:"address"`
-	Topics      []string `json:"topics"`
-	Data        []byte   `json:"data"`
-	BlockNumber uint64   `json:"blockNumber"`
-	TxHash      string   `json:"transactionHash"`
-	TxIndex     uint     `json:"transactionIndex"`
-	BlockHash   string   `json:"blockHash"`
-	Index       uint     `json:"logIndex"`
-	Removed     bool     `json:"removed"`
-}
-
 // Header contains block header information.
 type Header struct {
 	Hash       string   `json:"hash"`
