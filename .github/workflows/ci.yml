@@ -20,7 +20,7 @@ env:
 
 jobs:
   prepare:
-    runs-on: [self-hosted]
+    runs-on: [ubuntu-22.04]
     outputs:
       current_branch: ${{ steps.current_branch.outputs.value }}
       head_sha: ${{ steps.head_sha.outputs.value }}
@@ -70,7 +70,7 @@ jobs:
 
   lint:
     name: Run golangci-lint
-    runs-on: [self-hosted]
+    runs-on: [ubuntu-22.04]
     needs:
       - prepare
     steps:
@@ -89,7 +89,7 @@ jobs:
           skip-build-cache: true
 
   test:
-    runs-on: [self-hosted]
+    runs-on: [ubuntu-22.04]
     needs:
       - prepare
     services:
@@ -113,7 +113,7 @@ jobs:
         refs/heads/main
         refs/heads/release
       ', github.ref)
-    runs-on: [self-hosted]
+    runs-on: [ubuntu-22.04]
     needs:
       - prepare
     steps:
