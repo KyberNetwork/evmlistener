@@ -7,15 +7,14 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/emirpasic/gods/queues/circularbuffer"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 // BaseBlockKeeper is a purely on-memory block keeper.
 type BaseBlockKeeper struct {
 	mu           sync.RWMutex
 	maxNumBlocks int
-	head         common.Hash
-	blockMap     map[common.Hash]types.Block
+	head         string
+	blockMap     map[string]types.Block
 	queue        *circularbuffer.Queue
 }
 
@@ -28,8 +27,8 @@ func NewBaseBlockKeeper(maxNumBlocks int) *BaseBlockKeeper {
 	return &BaseBlockKeeper{
 		mu:           sync.RWMutex{},
 		maxNumBlocks: maxNumBlocks,
-		head:         common.Hash{},
-		blockMap:     make(map[common.Hash]types.Block, maxNumBlocks),
+		head:         "",
+		blockMap:     make(map[string]types.Block, maxNumBlocks),
 		queue:        circularbuffer.New(maxNumBlocks),
 	}
 }
@@ -37,7 +36,7 @@ func NewBaseBlockKeeper(maxNumBlocks int) *BaseBlockKeeper {
 // Init ...
 func (k *BaseBlockKeeper) Init() error {
 	if len(k.blockMap) > 0 {
-		k.blockMap = make(map[common.Hash]types.Block, k.maxNumBlocks)
+		k.blockMap = make(map[string]types.Block, k.maxNumBlocks)
 		k.queue.Clear()
 	}
 
@@ -54,14 +53,14 @@ func (k *BaseBlockKeeper) Cap() int {
 	return k.maxNumBlocks
 }
 
-func (k *BaseBlockKeeper) exists(hash common.Hash) bool {
+func (k *BaseBlockKeeper) exists(hash string) bool {
 	_, ok := k.blockMap[hash]
 
 	return ok
 }
 
 // Exists checks whether a block hash is exists or not.
-func (k *BaseBlockKeeper) Exists(hash common.Hash) (bool, error) {
+func (k *BaseBlockKeeper) Exists(hash string) (bool, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
@@ -74,7 +73,7 @@ func (k *BaseBlockKeeper) removeOld() {
 		return
 	}
 
-	hash, ok := v.(common.Hash)
+	hash, ok := v.(string)
 	if !ok {
 		return
 	}
@@ -99,7 +98,7 @@ func (k *BaseBlockKeeper) Add(block types.Block) error {
 		if block.ParentHash != k.head {
 			block.ReorgedHash = k.head
 		} else {
-			block.ReorgedHash = common.Hash{}
+			block.ReorgedHash = ""
 		}
 	}
 
@@ -118,7 +117,7 @@ func (k *BaseBlockKeeper) Head() (types.Block, error) {
 	return k.Get(k.head)
 }
 
-func (k *BaseBlockKeeper) get(hash common.Hash) (types.Block, error) {
+func (k *BaseBlockKeeper) get(hash string) (types.Block, error) {
 	block, ok := k.blockMap[hash]
 	if !ok {
 		return types.Block{}, fmt.Errorf("block %v: %w", hash, errors.ErrNotFound)
@@ -128,7 +127,7 @@ func (k *BaseBlockKeeper) get(hash common.Hash) (types.Block, error) {
 }
 
 // Get returns a block for given hash.
-func (k *BaseBlockKeeper) Get(hash common.Hash) (types.Block, error) {
+func (k *BaseBlockKeeper) Get(hash string) (types.Block, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 

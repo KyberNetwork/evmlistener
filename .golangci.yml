@@ -27,6 +27,7 @@ linters:
     - nonamedreturns
     - testpackage
     - tagliatelle
+    - goerr113
 
 linters-settings:
   funlen:

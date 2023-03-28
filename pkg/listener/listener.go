@@ -2,44 +2,28 @@ package listener
 
 import (
 	"context"
-	"math/big"
 	"syscall"
-	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
-	ltypes "github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
+	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
 const (
-	bufLen           = 10000
-	rpcRetryInterval = 100 * time.Millisecond
-
-	errStringUnknownBlock = "unknown block"
+	bufLen = 10000
 )
-
-// EVMClient is an client for evm used by listener.
-type EVMClient interface {
-	BlockNumber(context.Context) (uint64, error)
-	SubscribeNewHead(context.Context, chan<- *types.Header) (ethereum.Subscription, error)
-	FilterLogs(context.Context, ethereum.FilterQuery) ([]types.Log, error)
-	HeaderByHash(context.Context, common.Hash) (*types.Header, error)
-	HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
-}
 
 // Listener represents a listener service for on-chain events.
 type Listener struct {
-	evmClient EVMClient // nolint: unused
-	handler   *Handler  // nolint: unused
+	evmClient evmclient.IClient
+	handler   *Handler
 	l         *zap.SugaredLogger
 }
 
 // New ...
-func New(l *zap.SugaredLogger, evmClient EVMClient, handler *Handler) *Listener {
+func New(l *zap.SugaredLogger, evmClient evmclient.IClient, handler *Handler) *Listener {
 	return &Listener{
 		evmClient: evmClient,
 		handler:   handler,
@@ -47,35 +31,21 @@ func New(l *zap.SugaredLogger, evmClient EVMClient, handler *Handler) *Listener 
 	}
 }
 
-func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (ltypes.Block, error) {
+func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (types.Block, error) {
 	var err error
 	var logs []types.Log
 
-	// retry up to 3 times before give up.
-	for i := 0; i < 3; i++ {
-		logs, err = getLogsByBlockHash(ctx, l.evmClient, header.Hash())
-		if err == nil {
-			break
-		}
-
-		if err.Error() != errStringUnknownBlock {
-			break
-		}
-
-		l.l.Infow("Retry get logs by block hash", "hash", header.Hash(), "error", err)
-		time.Sleep(rpcRetryInterval)
-	}
-
+	logs, err = getLogsByBlockHash(ctx, l.evmClient, header.Hash)
 	if err != nil {
-		l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash(), "error", err)
+		l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash, "error", err)
 
-		return ltypes.Block{}, err
+		return types.Block{}, err
 	}
 
 	return headerToBlock(header, logs), nil
 }
 
-func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- ltypes.Block) error {
+func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- types.Block) error {
 	l.l.Info("Start subscribing for new head of the chain")
 	headerCh := make(chan *types.Header, 1)
 	sub, err := l.evmClient.SubscribeNewHead(ctx, headerCh)
@@ -109,7 +79,7 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- lty
 	}
 }
 
-func (l *Listener) syncBlocks(ctx context.Context, blockCh chan ltypes.Block) error {
+func (l *Listener) syncBlocks(ctx context.Context, blockCh chan types.Block) error {
 	for {
 		err := l.subscribeNewBlockHead(ctx, blockCh)
 		if err == nil {
@@ -132,7 +102,7 @@ func (l *Listener) Run(ctx context.Context) error {
 	l.l.Info("Start listener service")
 	defer l.l.Info("Stop listener service")
 
-	blockCh := make(chan ltypes.Block, bufLen)
+	blockCh := make(chan types.Block, bufLen)
 	go func() {
 		err := l.syncBlocks(ctx, blockCh)
 		if err != nil {

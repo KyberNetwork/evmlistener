@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"github.com/KyberNetwork/evmlistener/pkg/block"
+	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/listener"
 	"github.com/KyberNetwork/evmlistener/pkg/redis"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )
@@ -46,7 +46,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	l := zap.S()
 
 	rpc := c.String(nodeRPCFlag.Name)
-	ethClient, err := ethclient.DialContext(context.Background(), rpc)
+	ethClient, err := evmclient.DialContext(context.Background(), rpc)
 	if err != nil {
 		l.Errorw("Fail to connect to node", "rpc", rpc, "error", err)
 
