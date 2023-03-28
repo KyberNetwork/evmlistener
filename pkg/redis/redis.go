@@ -78,7 +78,12 @@ func (c *Client) Get(ctx context.Context, key string, o interface{}) error {
 		return err
 	}
 
-	return Decode([]byte(data), o)
+	err = Decode([]byte(data), o)
+	if err != nil {
+		return fmt.Errorf("decode error: data=%s error=%w", data, err)
+	}
+
+	return nil
 }
 
 // Exists ...
