@@ -9,6 +9,8 @@ import (
 	"github.com/emirpasic/gods/queues/circularbuffer"
 )
 
+const zeroHash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
 // BaseBlockKeeper is a purely on-memory block keeper.
 type BaseBlockKeeper struct {
 	mu           sync.RWMutex
@@ -98,7 +100,7 @@ func (k *BaseBlockKeeper) Add(block types.Block) error {
 		if block.ParentHash != k.head {
 			block.ReorgedHash = k.head
 		} else {
-			block.ReorgedHash = ""
+			block.ReorgedHash = zeroHash
 		}
 	}
 
