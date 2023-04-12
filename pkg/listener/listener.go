@@ -35,12 +35,16 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (t
 	var err error
 	var logs []types.Log
 
+	l.l.Debugw("Handle for new head", "hash", header.Hash)
+
 	logs, err = getLogsByBlockHash(ctx, l.evmClient, header.Hash)
 	if err != nil {
 		l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash, "error", err)
 
 		return types.Block{}, err
 	}
+
+	l.l.Debugw("Handle new head success", "hash", header.Hash)
 
 	return headerToBlock(header, logs), nil
 }
