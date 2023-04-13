@@ -149,6 +149,14 @@ func (l *Listener) Run(ctx context.Context) error {
 	l.l.Info("Start listener service")
 	defer l.l.Info("Stop listener service")
 
+	l.l.Info("Init handler")
+	err := l.handler.Init(ctx)
+	if err != nil {
+		l.l.Errorw("Fail to init handler", "error", err)
+
+		return err
+	}
+
 	blockCh := make(chan types.Block, bufLen)
 	go func() {
 		err := l.syncBlocks(ctx, blockCh)
@@ -158,14 +166,6 @@ func (l *Listener) Run(ctx context.Context) error {
 
 		close(blockCh)
 	}()
-
-	l.l.Info("Init handler")
-	err := l.handler.Init(ctx)
-	if err != nil {
-		l.l.Errorw("Fail to init handler", "error", err)
-
-		return err
-	}
 
 	l.l.Info("Start handling for new blocks")
 	for b := range blockCh {
