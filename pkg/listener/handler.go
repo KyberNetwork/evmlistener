@@ -50,12 +50,7 @@ func (h *Handler) Init(ctx context.Context) error {
 	}
 
 	h.l.Info("Get latest block number")
-	toBlock, err := h.evmClient.BlockNumber(ctx)
-	if err != nil {
-		h.l.Errorw("Fail to get latest block number", "error", err)
-
-		return err
-	}
+	toBlock := uint64(17034440) //nolint
 
 	fromBlock := toBlock - uint64(h.blockKeeper.Cap()) + 1
 
