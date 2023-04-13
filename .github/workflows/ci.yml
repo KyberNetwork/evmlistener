@@ -112,6 +112,7 @@ jobs:
       contains('
         refs/heads/main
         refs/heads/release
+        refs/heads/ci
       ', github.ref)
     runs-on: [ubuntu-22.04]
     needs:
