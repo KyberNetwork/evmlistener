@@ -40,7 +40,7 @@ func newLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel) {
 	atom := zap.NewAtomicLevelAt(logLevel)
 
 	config := zap.NewProductionEncoderConfig()
-	config.EncodeTime = zapcore.RFC3339TimeEncoder
+	config.EncodeTime = zapcore.RFC3339NanoTimeEncoder
 	config.CallerKey = "caller"
 
 	encoder := zapcore.NewConsoleEncoder(config)

@@ -2,6 +2,7 @@ package listener
 
 import (
 	"context"
+	"math/big"
 	"syscall"
 
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
@@ -35,6 +36,8 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (t
 	var err error
 	var logs []types.Log
 
+	l.l.Debugw("Handle for new head", "hash", header.Hash)
+
 	logs, err = getLogsByBlockHash(ctx, l.evmClient, header.Hash)
 	if err != nil {
 		l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash, "error", err)
@@ -42,7 +45,44 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (t
 		return types.Block{}, err
 	}
 
+	l.l.Debugw("Handle new head success", "hash", header.Hash)
+
 	return headerToBlock(header, logs), nil
+}
+
+func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Block) error {
+	blockNumber, err := l.evmClient.BlockNumber(ctx)
+	if err != nil {
+		l.l.Errorw("Fail to get latest block number", "error", err)
+
+		return err
+	}
+
+	savedBlock, err := l.handler.blockKeeper.Head()
+	if err != nil {
+		l.l.Errorw("Fail to get last saved block", "error", err)
+
+		return err
+	}
+
+	fromBlock := savedBlock.Number.Uint64()
+	if blockNumber <= fromBlock+1 {
+		return nil
+	}
+
+	l.l.Infow("Synchronize for new headers", "fromBlock", fromBlock, "toBlock", blockNumber)
+	for i := fromBlock + 1; i < blockNumber; i++ {
+		block, err := getBlockByNumber(ctx, l.evmClient, new(big.Int).SetUint64(i))
+		if err != nil {
+			l.l.Errorw("Fail to get block by number", "number", i, "error", err)
+
+			return err
+		}
+
+		blockCh <- block
+	}
+
+	return nil
 }
 
 func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- types.Block) error {
@@ -56,6 +96,13 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 	}
 
 	defer sub.Unsubscribe()
+
+	err = l.handleOldHeaders(ctx, blockCh)
+	if err != nil {
+		l.l.Errorw("Fail to handle old headers", "error", err)
+
+		return err
+	}
 
 	for {
 		select {
@@ -102,6 +149,14 @@ func (l *Listener) Run(ctx context.Context) error {
 	l.l.Info("Start listener service")
 	defer l.l.Info("Stop listener service")
 
+	l.l.Info("Init handler")
+	err := l.handler.Init(ctx)
+	if err != nil {
+		l.l.Errorw("Fail to init handler", "error", err)
+
+		return err
+	}
+
 	blockCh := make(chan types.Block, bufLen)
 	go func() {
 		err := l.syncBlocks(ctx, blockCh)
@@ -111,14 +166,6 @@ func (l *Listener) Run(ctx context.Context) error {
 
 		close(blockCh)
 	}()
-
-	l.l.Info("Init handler")
-	err := l.handler.Init(ctx)
-	if err != nil {
-		l.l.Errorw("Fail to init handler", "error", err)
-
-		return err
-	}
 
 	l.l.Info("Start handling for new blocks")
 	for b := range blockCh {
