@@ -37,18 +37,6 @@ func NewHandler(
 
 // Init ...
 func (h *Handler) Init(ctx context.Context) error {
-	h.l.Info("Init block keeper")
-	err := h.blockKeeper.Init()
-	if err != nil {
-		h.l.Errorw("Fail to initialize block keeper", "error", err)
-
-		return err
-	}
-
-	if h.blockKeeper.Len() > 0 {
-		return nil
-	}
-
 	h.l.Info("Get latest block number")
 	toBlock := uint64(17034440) //nolint
 
