@@ -2,6 +2,7 @@ package listener
 
 import (
 	"context"
+	"math/big"
 	"syscall"
 
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
@@ -49,6 +50,41 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (t
 	return headerToBlock(header, logs), nil
 }
 
+func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Block) error {
+	blockNumber, err := l.evmClient.BlockNumber(ctx)
+	if err != nil {
+		l.l.Errorw("Fail to get latest block number", "error", err)
+
+		return err
+	}
+
+	savedBlock, err := l.handler.blockKeeper.Head()
+	if err != nil {
+		l.l.Errorw("Fail to get last saved block", "error", err)
+
+		return err
+	}
+
+	fromBlock := savedBlock.Number.Uint64()
+	if blockNumber <= fromBlock+1 {
+		return nil
+	}
+
+	l.l.Infow("Synchronize for new headers", "fromBlock", fromBlock, "toBlock", blockNumber)
+	for i := fromBlock + 1; i < blockNumber; i++ {
+		block, err := getBlockByNumber(ctx, l.evmClient, new(big.Int).SetUint64(i))
+		if err != nil {
+			l.l.Errorw("Fail to get block by number", "number", i, "error", err)
+
+			return err
+		}
+
+		blockCh <- block
+	}
+
+	return nil
+}
+
 func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- types.Block) error {
 	l.l.Info("Start subscribing for new head of the chain")
 	headerCh := make(chan *types.Header, 1)
@@ -60,6 +96,13 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 	}
 
 	defer sub.Unsubscribe()
+
+	err = l.handleOldHeaders(ctx, blockCh)
+	if err != nil {
+		l.l.Errorw("Fail to handle old headers", "error", err)
+
+		return err
+	}
 
 	for {
 		select {
