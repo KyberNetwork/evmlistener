@@ -23,7 +23,6 @@ type RedisBlockKeeperTestSuite struct {
 }
 
 func (ts *RedisBlockKeeperTestSuite) SetupTest() {
-	rand.Seed(time.Now().UnixNano())
 	prefix := fmt.Sprintf("test-redis-block-keeper-%d:", rand.Int()) // nolint
 
 	redisClient, err := redis.New(redis.Config{

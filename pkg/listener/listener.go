@@ -3,7 +3,9 @@ package listener
 import (
 	"context"
 	"math/big"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
@@ -18,17 +20,76 @@ const (
 
 // Listener represents a listener service for on-chain events.
 type Listener struct {
+	l *zap.SugaredLogger
+
 	evmClient evmclient.IClient
 	handler   *Handler
-	l         *zap.SugaredLogger
+
+	mu                  sync.Mutex
+	sanityEVMClient     evmclient.IClient
+	sanityCheckInterval time.Duration
+	lastHeader          *types.Header
+
+	queue       *Queue
+	maxQueueLen int
 }
 
 // New ...
-func New(l *zap.SugaredLogger, evmClient evmclient.IClient, handler *Handler) *Listener {
+func New(
+	l *zap.SugaredLogger, evmClient evmclient.IClient, handler *Handler,
+	sanityEVMClient evmclient.IClient, sanityCheckInterval time.Duration,
+	maxQueueLen int,
+) *Listener {
+	var queue *Queue
+	if maxQueueLen > 0 {
+		queue = NewQueue(maxQueueLen)
+	}
+
 	return &Listener{
+		l: l,
+
 		evmClient: evmClient,
 		handler:   handler,
-		l:         l,
+
+		sanityEVMClient:     sanityEVMClient,
+		sanityCheckInterval: sanityCheckInterval,
+
+		queue: queue,
+	}
+}
+
+func (l *Listener) publishBlock(ch chan<- types.Block, block *types.Block) {
+	if l.queue == nil {
+		ch <- *block
+
+		return
+	}
+
+	baseBlockNumber := l.queue.BlockNumber()
+	blockNumber := block.Number.Uint64()
+
+	if blockNumber < baseBlockNumber {
+		ch <- *block
+	}
+
+	if int(blockNumber-baseBlockNumber) >= l.maxQueueLen {
+		for i := 0; i <= int(blockNumber-baseBlockNumber)-l.maxQueueLen; i++ {
+			b, _ := l.queue.Dequeue()
+			if b != nil {
+				ch <- *b
+			}
+		}
+	}
+
+	l.queue.Insert(block)
+	for !l.queue.Empty() {
+		b, _ := l.queue.Peek()
+		if b == nil {
+			return
+		}
+
+		ch <- *b
+		l.queue.Dequeue()
 	}
 }
 
@@ -71,16 +132,26 @@ func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Bl
 	}
 
 	l.l.Infow("Synchronize for new headers", "fromBlock", fromBlock, "toBlock", blockNumber)
+	var wg sync.WaitGroup
 	for i := fromBlock + 1; i < blockNumber; i++ {
-		block, err := getBlockByNumber(ctx, l.evmClient, new(big.Int).SetUint64(i))
-		if err != nil {
-			l.l.Errorw("Fail to get block by number", "number", i, "error", err)
+		wg.Add(1)
+		go func(number uint64) {
+			defer wg.Done()
 
-			return err
-		}
-
-		blockCh <- block
+			block, err := getBlockByNumber(ctx, l.evmClient, new(big.Int).SetUint64(number))
+			if err != nil {
+				l.l.Errorw("Fail to get block by number", "number", number, "error", err)
+			} else {
+				l.publishBlock(blockCh, &block)
+			}
+		}(i)
+		time.Sleep(time.Millisecond)
 	}
+
+	l.l.Infow("Waiting for all blocks to be synchronized", "fromBlock", fromBlock, "toBlock", blockNumber)
+	wg.Wait()
+
+	l.l.Infow("Finish synchronize blocks")
 
 	return nil
 }
@@ -116,12 +187,20 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 			return err
 		case header := <-headerCh:
 			l.l.Debugw("Receive new head of the chain", "header", header)
-			b, err := l.handleNewHeader(ctx, header)
-			if err != nil {
-				l.l.Errorw("Fail to handle new head", "header", header, "error", err)
-			} else {
-				blockCh <- b
+			l.mu.Lock()
+			if l.lastHeader == nil || l.lastHeader.Time < header.Time {
+				l.lastHeader = header
 			}
+			l.mu.Unlock()
+
+			go func(header *types.Header) {
+				b, err := l.handleNewHeader(ctx, header)
+				if err != nil {
+					l.l.Errorw("Fail to handle new head", "header", header, "error", err)
+				} else {
+					l.publishBlock(blockCh, &b)
+				}
+			}(header)
 		}
 	}
 }
@@ -157,6 +236,25 @@ func (l *Listener) Run(ctx context.Context) error {
 		return err
 	}
 
+	if l.queue != nil {
+		head, err := l.handler.blockKeeper.Head()
+		if err != nil {
+			l.l.Errorw("Fail to get block head", "error", err)
+
+			return err
+		}
+
+		l.queue.SetBlockNumber(head.Number.Uint64() + 1)
+	}
+
+	// Start go routine for sanity checking.
+	go func() {
+		err := l.runSanityCheck(ctx)
+		if err != nil {
+			l.l.Fatalw("Sanity check failed", "error", err)
+		}
+	}()
+
 	blockCh := make(chan types.Block, bufLen)
 	go func() {
 		err := l.syncBlocks(ctx, blockCh)
@@ -180,4 +278,50 @@ func (l *Listener) Run(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (l *Listener) sanityCheck(ctx context.Context, validSecond uint64) error {
+	l.mu.Lock()
+	lastHeader := l.lastHeader
+	l.mu.Unlock()
+	if lastHeader == nil {
+		return nil
+	}
+
+	header, err := getHeaderByNumber(ctx, l.sanityEVMClient, nil)
+	if err != nil {
+		return err
+	}
+
+	if lastHeader.Time < header.Time-validSecond {
+		return errors.New("sanity check failed")
+	}
+
+	return nil
+}
+
+func (l *Listener) runSanityCheck(ctx context.Context) error {
+	if l.sanityEVMClient == nil {
+		return nil
+	}
+
+	intervalSecond := uint64(l.sanityCheckInterval / time.Second)
+	if intervalSecond == 0 {
+		intervalSecond = 1
+	}
+
+	ticker := time.NewTicker(l.sanityCheckInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			err := l.sanityCheck(ctx, intervalSecond)
+			if err != nil {
+				return err
+			}
+		}
+	}
 }
