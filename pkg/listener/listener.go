@@ -38,13 +38,7 @@ type Listener struct {
 func New(
 	l *zap.SugaredLogger, evmClient evmclient.IClient, handler *Handler,
 	sanityEVMClient evmclient.IClient, sanityCheckInterval time.Duration,
-	maxQueueLen int,
 ) *Listener {
-	var queue *Queue
-	if maxQueueLen > 0 {
-		queue = NewQueue(maxQueueLen)
-	}
-
 	return &Listener{
 		l: l,
 
@@ -53,9 +47,6 @@ func New(
 
 		sanityEVMClient:     sanityEVMClient,
 		sanityCheckInterval: sanityCheckInterval,
-
-		queue:       queue,
-		maxQueueLen: maxQueueLen,
 	}
 }
 
@@ -135,24 +126,16 @@ func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Bl
 	}
 
 	l.l.Infow("Synchronize for new headers", "fromBlock", fromBlock, "toBlock", blockNumber)
-	var wg sync.WaitGroup
 	for i := fromBlock + 1; i < blockNumber; i++ {
-		wg.Add(1)
-		go func(number uint64) {
-			defer wg.Done()
+		block, err := getBlockByNumber(ctx, l.evmClient, new(big.Int).SetUint64(i))
+		if err != nil {
+			l.l.Errorw("Fail to get block by number", "number", i, "error", err)
 
-			block, err := getBlockByNumber(ctx, l.evmClient, new(big.Int).SetUint64(number))
-			if err != nil {
-				l.l.Fatalw("Fail to get block by number", "number", number, "error", err)
-			} else {
-				l.publishBlock(blockCh, &block)
-			}
-		}(i)
-		time.Sleep(time.Millisecond)
+			return err
+		}
+
+		l.publishBlock(blockCh, &block)
 	}
-
-	l.l.Infow("Waiting for all blocks to be synchronized", "fromBlock", fromBlock, "toBlock", blockNumber)
-	wg.Wait()
 
 	l.l.Infow("Finish synchronize blocks", "fromBlock", fromBlock, "toBlock", blockNumber)
 
@@ -196,14 +179,12 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 			}
 			l.mu.Unlock()
 
-			go func(header *types.Header) {
-				b, err := l.handleNewHeader(ctx, header)
-				if err != nil {
-					l.l.Errorw("Fail to handle new head", "header", header, "error", err)
-				} else {
-					l.publishBlock(blockCh, &b)
-				}
-			}(header)
+			b, err := l.handleNewHeader(ctx, header)
+			if err != nil {
+				l.l.Errorw("Fail to handle new head", "header", header, "error", err)
+			} else {
+				l.publishBlock(blockCh, &b)
+			}
 		}
 	}
 }

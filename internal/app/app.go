@@ -92,9 +92,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	topic := c.String(publisherTopicFlag.Name)
 	handler := listener.NewHandler(l, topic, evmClient, blockKeeper, redisStream)
 
-	maxBlockQueueLen := c.Int(maxBlockQueueLenFlag.Name)
-
-	return listener.New(l, evmClient, handler, sanityEVMClient, sanityCheckInterval, maxBlockQueueLen), nil
+	return listener.New(l, evmClient, handler, sanityEVMClient, sanityCheckInterval), nil
 }
 
 const (
