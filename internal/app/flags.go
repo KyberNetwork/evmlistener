@@ -31,12 +31,6 @@ var (
 		Value:   24 * time.Second, //nolint:gomnd
 		Usage:   "Interval time for running santity check, default: 24s",
 	}
-	maxBlockQueueLenFlag = &cli.IntFlag{
-		Name:    "max-block-queue-len",
-		EnvVars: []string{"MAX_BLOCK_QUEUE_LEN"},
-		Value:   0,
-		Usage:   "Max block queue len for re-ordering blocks when fetch in parallel",
-	}
 
 	sentryDSNFlag = &cli.StringFlag{
 		Name:    "sentry-dsn",
@@ -158,7 +152,6 @@ func NewFlags() []cli.Flag {
 		nodeRPCFlag,
 		sanityNodeRPCFlag,
 		sanityCheckIntervalFlag,
-		maxBlockQueueLenFlag,
 	}
 	flags = append(flags, NewSentryFlags()...)
 	flags = append(flags, NewRedisFlags()...)
