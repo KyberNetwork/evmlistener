@@ -75,7 +75,7 @@ func (l *Listener) publishBlock(ch chan<- types.Block, block *types.Block) {
 		return
 	}
 
-	if int(blockNumber-baseBlockNumber) > l.maxQueueLen {
+	if int(blockNumber-baseBlockNumber) >= l.maxQueueLen {
 		for i := 0; i <= int(blockNumber-baseBlockNumber)-l.maxQueueLen; i++ {
 			b, _ := l.queue.Dequeue()
 			if b != nil {
