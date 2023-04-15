@@ -61,6 +61,7 @@ func New(
 func (l *Listener) publishBlock(ch chan<- types.Block, block *types.Block) {
 	if l.queue == nil {
 		ch <- *block
+
 		return
 	}
 

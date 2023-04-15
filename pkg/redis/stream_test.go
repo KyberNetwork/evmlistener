@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -26,8 +25,6 @@ func (ts *StreamTestSuite) SetupTest() {
 	}
 
 	ts.s = NewStream(client, 3)
-
-	rand.Seed(time.Now().UnixNano())
 }
 
 func (ts *StreamTestSuite) TestPublish() {
