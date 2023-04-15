@@ -54,7 +54,8 @@ func New(
 		sanityEVMClient:     sanityEVMClient,
 		sanityCheckInterval: sanityCheckInterval,
 
-		queue: queue,
+		queue:       queue,
+		maxQueueLen: maxQueueLen,
 	}
 }
 
@@ -70,6 +71,8 @@ func (l *Listener) publishBlock(ch chan<- types.Block, block *types.Block) {
 
 	if blockNumber < baseBlockNumber {
 		ch <- *block
+
+		return
 	}
 
 	if int(blockNumber-baseBlockNumber) >= l.maxQueueLen {
@@ -140,7 +143,7 @@ func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Bl
 
 			block, err := getBlockByNumber(ctx, l.evmClient, new(big.Int).SetUint64(number))
 			if err != nil {
-				l.l.Errorw("Fail to get block by number", "number", number, "error", err)
+				l.l.Fatalw("Fail to get block by number", "number", number, "error", err)
 			} else {
 				l.publishBlock(blockCh, &block)
 			}
@@ -151,7 +154,7 @@ func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Bl
 	l.l.Infow("Waiting for all blocks to be synchronized", "fromBlock", fromBlock, "toBlock", blockNumber)
 	wg.Wait()
 
-	l.l.Infow("Finish synchronize blocks")
+	l.l.Infow("Finish synchronize blocks", "fromBlock", fromBlock, "toBlock", blockNumber)
 
 	return nil
 }
