@@ -20,6 +20,17 @@ var (
 		Value:   "ws://localhost:8546",
 		Usage:   "Websocket rpc to connect to blockchain node, default: ws://localhost:8546",
 	}
+	sanityNodeRPCFlag = &cli.StringFlag{
+		Name:    "sanity-node-rpc",
+		EnvVars: []string{"SANITY_NODE_RPC"},
+		Usage:   "RPC to connect to blockchain nod for sanity check",
+	}
+	sanityCheckIntervalFlag = &cli.DurationFlag{
+		Name:    "sanity-check-interval",
+		EnvVars: []string{"SANITY_CHECK_INTERVAL"},
+		Value:   24 * time.Second, //nolint:gomnd
+		Usage:   "Interval time for running santity check, default: 24s",
+	}
 
 	sentryDSNFlag = &cli.StringFlag{
 		Name:    "sentry-dsn",
@@ -136,7 +147,12 @@ func NewBlockKeeperFlags() []cli.Flag {
 
 // NewFlags returns all flags for the application.
 func NewFlags() []cli.Flag {
-	flags := []cli.Flag{logLevelFlag, nodeRPCFlag}
+	flags := []cli.Flag{
+		logLevelFlag,
+		nodeRPCFlag,
+		sanityNodeRPCFlag,
+		sanityCheckIntervalFlag,
+	}
 	flags = append(flags, NewSentryFlags()...)
 	flags = append(flags, NewRedisFlags()...)
 	flags = append(flags, NewPublisherFlags()...)

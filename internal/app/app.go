@@ -46,14 +46,14 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	l := zap.S()
 
 	rpc := c.String(nodeRPCFlag.Name)
-	ethClient, err := evmclient.DialContext(context.Background(), rpc)
+	evmClient, err := evmclient.DialContext(context.Background(), rpc)
 	if err != nil {
 		l.Errorw("Fail to connect to node", "rpc", rpc, "error", err)
 
 		return nil, err
 	}
 
-	chainID, err := ethClient.ChainID(context.Background())
+	chainID, err := evmClient.ChainID(context.Background())
 	if err != nil {
 		l.Errorw("Fail to get chainID", "error", err)
 
@@ -61,6 +61,18 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	}
 
 	l = l.With("chainName", chainIDToName(chainID.Int64()))
+
+	sanityCheckInterval := c.Duration(sanityCheckIntervalFlag.Name)
+	var sanityEVMClient evmclient.IClient
+	sanityRPC := c.String(sanityNodeRPCFlag.Name)
+	if sanityRPC != "" {
+		sanityEVMClient, err = evmclient.DialContext(context.Background(), sanityRPC)
+		if err != nil {
+			l.Errorw("Fail to setup EVM client for sanity check", "error", err)
+
+			return nil, err
+		}
+	}
 
 	redisConfig := redisConfigFromCli(c)
 	redisClient, err := redis.New(redisConfig)
@@ -78,9 +90,9 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	redisStream := redis.NewStream(redisClient, maxLen)
 
 	topic := c.String(publisherTopicFlag.Name)
-	handler := listener.NewHandler(l, topic, ethClient, blockKeeper, redisStream)
+	handler := listener.NewHandler(l, topic, evmClient, blockKeeper, redisStream)
 
-	return listener.New(l, ethClient, handler), nil
+	return listener.New(l, evmClient, handler, sanityEVMClient, sanityCheckInterval), nil
 }
 
 const (
