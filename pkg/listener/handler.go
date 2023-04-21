@@ -38,7 +38,7 @@ func NewHandler(
 // Init ...
 func (h *Handler) Init(ctx context.Context) error {
 	h.l.Info("Get latest block number")
-	toBlock := uint64(17034440) //nolint
+	toBlock := uint64(17094165) //nolint
 
 	fromBlock := toBlock - uint64(h.blockKeeper.Cap()) + 1
 
