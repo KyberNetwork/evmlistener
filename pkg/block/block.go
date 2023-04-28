@@ -5,6 +5,8 @@ import (
 )
 
 // Keeper is an interface for interacting with block keeper.
+//
+//nolint:interfacebloat
 type Keeper interface {
 	Init() error
 	Len() int
