@@ -15,4 +15,6 @@ type Keeper interface {
 	Get(hash string) (types.Block, error)
 	IsReorg(b types.Block) (bool, error)
 	GetRecentBlocks(n int) ([]types.Block, error)
+	GetHead() string
+	SetHead(hash string)
 }

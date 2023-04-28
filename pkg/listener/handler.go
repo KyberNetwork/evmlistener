@@ -35,6 +35,23 @@ func NewHandler(
 	}
 }
 
+func (h *Handler) getBlockNumber(ctx context.Context) (uint64, error) {
+	hash := h.blockKeeper.GetHead()
+	if hash != "" {
+		h.l.Infow("Get header from block hash", "hash", hash)
+		header, err := getHeaderByHash(ctx, h.evmClient, hash)
+		if err == nil {
+			return header.Number.Uint64(), nil
+		}
+
+		h.l.Warnw("Fail to get header by hash", "hash", hash, "error", err)
+	}
+
+	h.l.Infow("Get latest block number from node")
+
+	return h.evmClient.BlockNumber(ctx)
+}
+
 // Init ...
 func (h *Handler) Init(ctx context.Context) error {
 	h.l.Info("Init block keeper")
@@ -49,10 +66,10 @@ func (h *Handler) Init(ctx context.Context) error {
 		return nil
 	}
 
-	h.l.Info("Get latest block number")
-	toBlock, err := h.evmClient.BlockNumber(ctx)
+	h.l.Info("Get saved block number or latest block number")
+	toBlock, err := h.getBlockNumber(ctx)
 	if err != nil {
-		h.l.Errorw("Fail to get latest block number", "error", err)
+		h.l.Errorw("Fail to get block number", "error", err)
 
 		return err
 	}
