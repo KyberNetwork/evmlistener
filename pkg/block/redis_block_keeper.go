@@ -40,8 +40,8 @@ func NewRedisBlockKeeper(
 // Init ...
 func (k *RedisBlockKeeper) Init() error {
 	// Get blockchain head from redis.
-	var hash string
-	err := k.redisClient.Get(context.Background(), blockHeadKey, &hash)
+	var head string
+	err := k.redisClient.Get(context.Background(), blockHeadKey, &head)
 	if err != nil {
 		if errors.Is(err, errors.ErrNotFound) {
 			return nil
@@ -55,6 +55,7 @@ func (k *RedisBlockKeeper) Init() error {
 	// Get recent blocks from redis.
 	n := k.BaseBlockKeeper.Cap()
 	blocks := make([]types.Block, 0, n)
+	hash := head
 	for i := 0; i < n; i++ {
 		var block types.Block
 		err = k.redisClient.Get(context.Background(), hash, &block)
@@ -78,6 +79,12 @@ func (k *RedisBlockKeeper) Init() error {
 		k.l.Errorw("Fail to initialize keeper", "error", err)
 
 		return err
+	}
+
+	if len(blocks) == 0 {
+		k.BaseBlockKeeper.SetHead(head)
+
+		return nil
 	}
 
 	for i := len(blocks) - 1; i >= 0; i-- {
@@ -116,7 +123,7 @@ func (k *RedisBlockKeeper) Add(block types.Block) error {
 		return err
 	}
 
-	err = k.redisClient.Set(context.Background(), blockHeadKey, block.Hash, k.expiration)
+	err = k.redisClient.Set(context.Background(), blockHeadKey, block.Hash, 0)
 	if err != nil {
 		k.l.Errorw("Fail to store block head into redis", "hash", block.Hash, "error", err)
 

@@ -5,6 +5,8 @@ import (
 )
 
 // Keeper is an interface for interacting with block keeper.
+//
+//nolint:interfacebloat
 type Keeper interface {
 	Init() error
 	Len() int
@@ -15,4 +17,6 @@ type Keeper interface {
 	Get(hash string) (types.Block, error)
 	IsReorg(b types.Block) (bool, error)
 	GetRecentBlocks(n int) ([]types.Block, error)
+	GetHead() string
+	SetHead(hash string)
 }
