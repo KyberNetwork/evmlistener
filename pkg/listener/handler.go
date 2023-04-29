@@ -40,11 +40,13 @@ func (h *Handler) getBlockNumber(ctx context.Context) (uint64, error) {
 	if hash != "" {
 		h.l.Infow("Get header from block hash", "hash", hash)
 		header, err := getHeaderByHash(ctx, h.evmClient, hash)
-		if err == nil {
-			return header.Number.Uint64(), nil
+		if err != nil {
+			h.l.Errorw("Fail to get header by hash", "hash", hash, "error", err)
+
+			return 0, err
 		}
 
-		h.l.Warnw("Fail to get header by hash", "hash", hash, "error", err)
+		return header.Number.Uint64(), nil
 	}
 
 	h.l.Infow("Get latest block number from node")
