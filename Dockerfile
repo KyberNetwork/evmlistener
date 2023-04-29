@@ -9,7 +9,7 @@ RUN go build -o app ./cmd/listener
 
 
 ## DEPLOY
-FROM debian:stretch
+FROM debian:buster
 
 RUN apt-get update && \
     apt install -y ca-certificates && \
