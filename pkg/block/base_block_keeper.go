@@ -171,3 +171,19 @@ func (k *BaseBlockKeeper) GetRecentBlocks(n int) ([]types.Block, error) {
 
 	return blocks, nil
 }
+
+// GetHead return hash of the head block.
+func (k *BaseBlockKeeper) GetHead() string {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
+	return k.head
+}
+
+// SetHead sets hash for the head block.
+func (k *BaseBlockKeeper) SetHead(hash string) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
+	k.head = hash
+}

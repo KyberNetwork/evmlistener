@@ -29,6 +29,7 @@ type Listener struct {
 	sanityEVMClient     evmclient.IClient
 	sanityCheckInterval time.Duration
 	lastHeader          *types.Header
+	resuming            bool
 
 	queue       *Queue
 	maxQueueLen int
@@ -122,6 +123,8 @@ func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Bl
 
 	fromBlock := savedBlock.Number.Uint64()
 	if blockNumber <= fromBlock+1 {
+		l.setResuming(false)
+
 		return nil
 	}
 
@@ -231,6 +234,8 @@ func (l *Listener) Run(ctx context.Context) error {
 		l.queue.SetBlockNumber(head.Number.Uint64() + 1)
 	}
 
+	l.setResuming(true)
+
 	// Start go routine for sanity checking.
 	go func() {
 		err := l.runSanityCheck(ctx)
@@ -277,6 +282,15 @@ func (l *Listener) sanityCheck(ctx context.Context, validSecond uint64) error {
 		return err
 	}
 
+	if l.isResuming() {
+		// Catchup to the lastest block.
+		if lastHeader.Time >= header.Time-validSecond {
+			l.setResuming(false)
+		}
+
+		return nil
+	}
+
 	if lastHeader.Time < header.Time-validSecond {
 		return errors.New("sanity check failed")
 	}
@@ -308,4 +322,18 @@ func (l *Listener) runSanityCheck(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+func (l *Listener) setResuming(v bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.resuming = v
+}
+
+func (l *Listener) isResuming() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	return l.resuming
 }
