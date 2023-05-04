@@ -131,6 +131,7 @@ func (ts *HandlerTestSuite) TestHandle() {
 
 	// Handle for re-org block plus missing block.
 	ts.evmClient.SetHead(54)
+	ts.blockKeeper.SetHead("")
 	err = ts.handler.Init(context.Background())
 	ts.Require().NoError(err)
 
