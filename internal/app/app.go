@@ -45,15 +45,23 @@ func redisConfigFromCli(c *cli.Context) redis.Config {
 func NewListener(c *cli.Context) (*listener.Listener, error) {
 	l := zap.S()
 
-	rpc := c.String(nodeRPCFlag.Name)
-	evmClient, err := evmclient.DialContext(context.Background(), rpc)
+	wsRPC := c.String(wsRPCFlag.Name)
+	wsEVMClient, err := evmclient.DialContext(context.Background(), wsRPC)
 	if err != nil {
-		l.Errorw("Fail to connect to node", "rpc", rpc, "error", err)
+		l.Errorw("Fail to connect to node", "rpc", wsRPC, "error", err)
 
 		return nil, err
 	}
 
-	chainID, err := evmClient.ChainID(context.Background())
+	httpRPC := c.String(httpRPCFlag.Name)
+	httpEVMClient, err := evmclient.DialContext(context.Background(), httpRPC)
+	if err != nil {
+		l.Errorw("Fail to connect to node", "rpc", httpRPC, "error", err)
+
+		return nil, err
+	}
+
+	chainID, err := httpEVMClient.ChainID(context.Background())
 	if err != nil {
 		l.Errorw("Fail to get chainID", "error", err)
 
@@ -90,9 +98,9 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	redisStream := redis.NewStream(redisClient, maxLen)
 
 	topic := c.String(publisherTopicFlag.Name)
-	handler := listener.NewHandler(l, topic, evmClient, blockKeeper, redisStream)
+	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, redisStream)
 
-	return listener.New(l, evmClient, handler, sanityEVMClient, sanityCheckInterval), nil
+	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval), nil
 }
 
 const (

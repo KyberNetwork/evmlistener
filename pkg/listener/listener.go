@@ -22,8 +22,9 @@ const (
 type Listener struct {
 	l *zap.SugaredLogger
 
-	evmClient evmclient.IClient
-	handler   *Handler
+	wsEVMClient   evmclient.IClient
+	httpEVMClient evmclient.IClient
+	handler       *Handler
 
 	mu                  sync.Mutex
 	sanityEVMClient     evmclient.IClient
@@ -37,14 +38,16 @@ type Listener struct {
 
 // New ...
 func New(
-	l *zap.SugaredLogger, evmClient evmclient.IClient, handler *Handler,
+	l *zap.SugaredLogger, wsEVMClient evmclient.IClient,
+	httpEVMClient evmclient.IClient, handler *Handler,
 	sanityEVMClient evmclient.IClient, sanityCheckInterval time.Duration,
 ) *Listener {
 	return &Listener{
 		l: l,
 
-		evmClient: evmClient,
-		handler:   handler,
+		wsEVMClient:   wsEVMClient,
+		httpEVMClient: httpEVMClient,
+		handler:       handler,
 
 		sanityEVMClient:     sanityEVMClient,
 		sanityCheckInterval: sanityCheckInterval,
@@ -94,7 +97,7 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (t
 
 	l.l.Debugw("Handle for new head", "hash", header.Hash)
 
-	logs, err = getLogsByBlockHash(ctx, l.evmClient, header.Hash)
+	logs, err = getLogsByBlockHash(ctx, l.httpEVMClient, header.Hash)
 	if err != nil {
 		l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash, "error", err)
 
@@ -107,7 +110,7 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (t
 }
 
 func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Block) error {
-	blockNumber, err := l.evmClient.BlockNumber(ctx)
+	blockNumber, err := l.httpEVMClient.BlockNumber(ctx)
 	if err != nil {
 		l.l.Errorw("Fail to get latest block number", "error", err)
 
@@ -130,7 +133,7 @@ func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Bl
 
 	l.l.Infow("Synchronize for new headers", "fromBlock", fromBlock, "toBlock", blockNumber)
 	for i := fromBlock + 1; i < blockNumber; i++ {
-		block, err := getBlockByNumber(ctx, l.evmClient, new(big.Int).SetUint64(i))
+		block, err := getBlockByNumber(ctx, l.httpEVMClient, new(big.Int).SetUint64(i))
 		if err != nil {
 			l.l.Errorw("Fail to get block by number", "number", i, "error", err)
 
@@ -148,7 +151,7 @@ func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Bl
 func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- types.Block) error {
 	l.l.Info("Start subscribing for new head of the chain")
 	headerCh := make(chan *types.Header, 1)
-	sub, err := l.evmClient.SubscribeNewHead(ctx, headerCh)
+	sub, err := l.wsEVMClient.SubscribeNewHead(ctx, headerCh)
 	if err != nil {
 		l.l.Errorw("Fail to subscribe new head", "error", err)
 
