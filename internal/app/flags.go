@@ -14,11 +14,17 @@ var (
 		Value:   "info",
 		Usage:   "Set log level for logger, values: debug, info, warn, error. Default: info",
 	}
-	nodeRPCFlag = &cli.StringFlag{
-		Name:    "node-rpc",
-		EnvVars: []string{"NODE_RPC"},
+	wsRPCFlag = &cli.StringFlag{
+		Name:    "ws-rpc",
+		EnvVars: []string{"WS_RPC"},
 		Value:   "ws://localhost:8546",
 		Usage:   "Websocket rpc to connect to blockchain node, default: ws://localhost:8546",
+	}
+	httpRPCFlag = &cli.StringFlag{
+		Name:    "http-rpc",
+		EnvVars: []string{"HTTP_RPC"},
+		Value:   "http://localhost:8545",
+		Usage:   "HTTP RPC to connect to blockchain node, default: http://localhost:8545",
 	}
 	sanityNodeRPCFlag = &cli.StringFlag{
 		Name:    "sanity-node-rpc",
@@ -149,7 +155,8 @@ func NewBlockKeeperFlags() []cli.Flag {
 func NewFlags() []cli.Flag {
 	flags := []cli.Flag{
 		logLevelFlag,
-		nodeRPCFlag,
+		wsRPCFlag,
+		httpRPCFlag,
 		sanityNodeRPCFlag,
 		sanityCheckIntervalFlag,
 	}
