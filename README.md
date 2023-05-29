@@ -14,7 +14,8 @@ cd evmlistener
 Create environment file with following content, `listener.env`:
 
 ```sh
-export NODE_RPC="wss://polygon.kyberengineering.io"
+export WS_RPC="wss://polygon.kyberengineering.io"
+export HTTP_RPC="https://polygon.kyberengineering.io"
 export SANITY_NODE_RPC="https://polygon.kyberengineering.io"
 export SANITY_CHECK_INTERVAL=10s
 export LOG_LEVEL="debug"
