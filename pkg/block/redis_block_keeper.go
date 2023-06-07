@@ -13,6 +13,8 @@ import (
 
 const (
 	blockHeadKey = "block-head"
+
+	minExpirationTime = time.Second
 )
 
 // RedisBlockKeeper ...
@@ -116,7 +118,8 @@ func (k *RedisBlockKeeper) Add(block types.Block) error {
 	}
 
 	// Store new block and new head into redis.
-	err = k.redisClient.Set(context.Background(), block.Hash, block, k.expiration)
+	expiration := k.getExpiration(int64(block.Timestamp))
+	err = k.redisClient.Set(context.Background(), block.Hash, block, expiration)
 	if err != nil {
 		k.l.Errorw("Fail to store block into redis", "hash", block.Hash, "error", err)
 
@@ -144,4 +147,14 @@ func (k *RedisBlockKeeper) Get(hash string) (b types.Block, err error) {
 	err = k.redisClient.Get(context.Background(), hash, &b)
 
 	return b, err
+}
+
+func (k *RedisBlockKeeper) getExpiration(blockTS int64) time.Duration {
+	blockTime := time.Unix(blockTS, 0)
+	now := time.Now()
+	if blockTime.Add(k.expiration).Before(now) {
+		return minExpirationTime
+	}
+
+	return k.expiration - now.Sub(blockTime)
 }
