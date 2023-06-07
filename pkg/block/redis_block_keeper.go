@@ -151,10 +151,10 @@ func (k *RedisBlockKeeper) Get(hash string) (b types.Block, err error) {
 
 func (k *RedisBlockKeeper) getExpiration(blockTS int64) time.Duration {
 	blockTime := time.Unix(blockTS, 0)
-	now := time.Now()
-	if blockTime.Add(k.expiration).Before(now) {
-		return minExpirationTime
+	expiration := k.expiration - time.Since(blockTime)
+	if expiration <= 0 {
+		expiration = minExpirationTime
 	}
 
-	return k.expiration - now.Sub(blockTime)
+	return expiration
 }
