@@ -5,14 +5,16 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
+	"github.com/ethereum/go-ethereum"
 )
 
 const (
 	errStringUnknownBlock = "unknown block"
 
-	defaultRetryInterval = 1000 * time.Millisecond
+	defaultRetryInterval = 100 * time.Millisecond
 )
 
 // getLogsByBlockHash returns logs by block hash, retry up to 3 times.
@@ -25,7 +27,7 @@ func getLogsByBlockHash(
 			return logs, nil
 		}
 
-		if err.Error() != errStringUnknownBlock {
+		if errors.Is(err, ethereum.NotFound) && err.Error() != errStringUnknownBlock {
 			return nil, err
 		}
 
@@ -71,7 +73,7 @@ func getHeaderByHash(
 			return header, nil
 		}
 
-		if err.Error() != errStringUnknownBlock {
+		if errors.Is(err, ethereum.NotFound) && err.Error() != errStringUnknownBlock {
 			return nil, err
 		}
 
@@ -106,7 +108,7 @@ func getHeaderByNumber(
 			return header, nil
 		}
 
-		if err.Error() != errStringUnknownBlock {
+		if errors.Is(err, ethereum.NotFound) && err.Error() != errStringUnknownBlock {
 			return nil, err
 		}
 
