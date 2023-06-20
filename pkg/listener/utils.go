@@ -14,7 +14,7 @@ import (
 const (
 	errStringUnknownBlock = "unknown block"
 
-	defaultRetryInterval = 100 * time.Millisecond
+	defaultRetryInterval = 500 * time.Millisecond
 )
 
 // getLogsByBlockHash returns logs by block hash, retry up to 3 times.
