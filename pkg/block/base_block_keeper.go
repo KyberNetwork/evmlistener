@@ -141,7 +141,7 @@ func (k *BaseBlockKeeper) IsReorg(block types.Block) (bool, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	return block.ParentHash != k.head, nil
+	return block.ParentHash != zeroHash && block.ParentHash != k.head, nil
 }
 
 // GetRecentBlocks returns a list of recent blocks in descending order.

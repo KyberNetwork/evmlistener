@@ -6,6 +6,7 @@ import (
 
 	"github.com/KyberNetwork/evmlistener/pkg/common"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient/ftmclient"
+	zksyncclient "github.com/KyberNetwork/evmlistener/pkg/evmclient/zksync-client"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	avaxtypes "github.com/ava-labs/coreth/core/types"
 	avaxclient "github.com/ava-labs/coreth/ethclient"
@@ -19,6 +20,7 @@ import (
 const (
 	chainIDFantom    = 250
 	chainIDAvalanche = 43114
+	chainIDZKSync    = 324
 )
 
 type FilterQuery struct {
@@ -50,10 +52,11 @@ type IClient interface {
 }
 
 type Client struct {
-	chainID    uint64
-	ethClient  *ethclient.Client
-	ftmClient  *ftmclient.Client
-	avaxClient avaxclient.Client
+	chainID      uint64
+	ethClient    *ethclient.Client
+	ftmClient    *ftmclient.Client
+	avaxClient   avaxclient.Client
+	zksyncClient *zksyncclient.Client
 }
 
 func Dial(rawurl string) (*Client, error) {
@@ -80,6 +83,8 @@ func DialContext(ctx context.Context, rawurl string) (*Client, error) {
 		client.ftmClient, err = ftmclient.DialContext(ctx, rawurl)
 	case chainIDAvalanche:
 		client.avaxClient, err = avaxclient.DialContext(ctx, rawurl)
+	case chainIDZKSync:
+		client.zksyncClient, err = zksyncclient.DialContext(ctx, rawurl)
 	default:
 		client.ethClient = ethClient
 	}
@@ -101,6 +106,8 @@ func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
 		return c.ftmClient.BlockNumber(ctx)
 	case chainIDAvalanche:
 		return c.avaxClient.BlockNumber(ctx)
+	case chainIDZKSync:
+		return c.zksyncClient.BlockNumber(ctx)
 	default:
 		return c.ethClient.BlockNumber(ctx)
 	}
@@ -157,6 +164,30 @@ func (c *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) 
 		}()
 
 		return sub, nil
+	case chainIDZKSync:
+		headerCh := make(chan *zksyncclient.Header)
+		sub, err := c.zksyncClient.SubscribeNewHead(ctx, headerCh)
+		if err != nil {
+			return nil, err
+		}
+
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case header := <-headerCh:
+					ch <- &types.Header{
+						Hash:       common.ToHex(header.Hash),
+						ParentHash: common.ToHex(header.ParentHash),
+						Number:     header.Number,
+						Time:       header.Time,
+					}
+				}
+			}
+		}()
+
+		return sub, nil
 	default:
 		headerCh := make(chan *ethtypes.Header)
 		sub, err := c.ethClient.SubscribeNewHead(ctx, headerCh)
@@ -186,57 +217,12 @@ func (c *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) 
 
 //nolint:dupl
 func (c *Client) ftmFilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, error) {
-	var blockHash *ethcommon.Hash
-	if q.BlockHash != nil {
-		hash := ethcommon.HexToHash(*q.BlockHash)
-		blockHash = &hash
-	}
-
-	addresses := make([]ethcommon.Address, 0, len(q.Addresses))
-	for _, address := range q.Addresses {
-		addresses = append(addresses, ethcommon.HexToAddress(address))
-	}
-
-	topics := make([][]ethcommon.Hash, 0, len(q.Topics))
-	for i, ts := range q.Topics {
-		topics[i] = make([]ethcommon.Hash, 0, len(ts))
-		for _, t := range ts {
-			topics[i] = append(topics[i], ethcommon.HexToHash(t))
-		}
-	}
-
-	logs, err := c.ftmClient.FilterLogs(ctx, ethereum.FilterQuery{
-		BlockHash: blockHash,
-		FromBlock: q.FromBlock,
-		ToBlock:   q.ToBlock,
-		Addresses: addresses,
-		Topics:    topics,
-	})
+	logs, err := c.ftmClient.FilterLogs(ctx, toEthereumFilterQuery(q))
 	if err != nil {
 		return nil, err
 	}
 
-	res := make([]types.Log, 0, len(logs))
-	for _, log := range logs {
-		topics := make([]string, 0, len(log.Topics))
-		for _, topic := range log.Topics {
-			topics = append(topics, common.ToHex(topic))
-		}
-
-		res = append(res, types.Log{
-			Address:     common.ToHex(log.Address),
-			Topics:      topics,
-			Data:        log.Data,
-			BlockNumber: log.BlockNumber,
-			TxHash:      common.ToHex(log.TxHash),
-			TxIndex:     log.TxIndex,
-			BlockHash:   common.ToHex(log.BlockHash),
-			Index:       log.Index,
-			Removed:     log.Removed,
-		})
-	}
-
-	return res, nil
+	return fromEthereumLogs(logs), nil
 }
 
 //nolint:dupl
@@ -271,82 +257,27 @@ func (c *Client) avaxFilterLogs(ctx context.Context, q FilterQuery) ([]types.Log
 		return nil, err
 	}
 
-	res := make([]types.Log, 0, len(logs))
-	for _, log := range logs {
-		topics := make([]string, 0, len(log.Topics))
-		for _, topic := range log.Topics {
-			topics = append(topics, common.ToHex(topic))
-		}
-
-		res = append(res, types.Log{
-			Address:     common.ToHex(log.Address),
-			Topics:      topics,
-			Data:        log.Data,
-			BlockNumber: log.BlockNumber,
-			TxHash:      common.ToHex(log.TxHash),
-			TxIndex:     log.TxIndex,
-			BlockHash:   common.ToHex(log.BlockHash),
-			Index:       log.Index,
-			Removed:     log.Removed,
-		})
-	}
-
-	return res, nil
+	return fromAvalancheLogs(logs), nil
 }
 
 //nolint:dupl
 func (c *Client) ethFilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, error) {
-	var blockHash *ethcommon.Hash
-	if q.BlockHash != nil {
-		hash := ethcommon.HexToHash(*q.BlockHash)
-		blockHash = &hash
-	}
-
-	addresses := make([]ethcommon.Address, 0, len(q.Addresses))
-	for _, address := range q.Addresses {
-		addresses = append(addresses, ethcommon.HexToAddress(address))
-	}
-
-	topics := make([][]ethcommon.Hash, 0, len(q.Topics))
-	for i, ts := range q.Topics {
-		topics[i] = make([]ethcommon.Hash, 0, len(ts))
-		for _, t := range ts {
-			topics[i] = append(topics[i], ethcommon.HexToHash(t))
-		}
-	}
-
-	logs, err := c.ethClient.FilterLogs(ctx, ethereum.FilterQuery{
-		BlockHash: blockHash,
-		FromBlock: q.FromBlock,
-		ToBlock:   q.ToBlock,
-		Addresses: addresses,
-		Topics:    topics,
-	})
+	logs, err := c.ethClient.FilterLogs(ctx, toEthereumFilterQuery(q))
 	if err != nil {
 		return nil, err
 	}
 
-	res := make([]types.Log, 0, len(logs))
-	for _, log := range logs {
-		topics := make([]string, 0, len(log.Topics))
-		for _, topic := range log.Topics {
-			topics = append(topics, common.ToHex(topic))
-		}
+	return fromEthereumLogs(logs), nil
+}
 
-		res = append(res, types.Log{
-			Address:     common.ToHex(log.Address),
-			Topics:      topics,
-			Data:        log.Data,
-			BlockNumber: log.BlockNumber,
-			TxHash:      common.ToHex(log.TxHash),
-			TxIndex:     log.TxIndex,
-			BlockHash:   common.ToHex(log.BlockHash),
-			Index:       log.Index,
-			Removed:     log.Removed,
-		})
+//nolint:dupl
+func (c *Client) zksyncFilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, error) {
+	logs, err := c.zksyncClient.FilterLogs(ctx, toEthereumFilterQuery(q))
+	if err != nil {
+		return nil, err
 	}
 
-	return res, nil
+	return fromEthereumLogs(logs), nil
 }
 
 func (c *Client) FilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, error) {
@@ -355,6 +286,8 @@ func (c *Client) FilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, er
 		return c.ftmFilterLogs(ctx, q)
 	case chainIDAvalanche:
 		return c.avaxFilterLogs(ctx, q)
+	case chainIDZKSync:
+		return c.zksyncFilterLogs(ctx, q)
 	default:
 		return c.ethFilterLogs(ctx, q)
 	}
@@ -382,6 +315,18 @@ func (c *Client) HeaderByHash(ctx context.Context, hash string) (*types.Header, 
 
 		return &types.Header{
 			Hash:       common.ToHex(header.Hash()),
+			ParentHash: common.ToHex(header.ParentHash),
+			Number:     header.Number,
+			Time:       header.Time,
+		}, nil
+	case chainIDZKSync:
+		header, err := c.zksyncClient.HeaderByHash(ctx, ethcommon.HexToHash(hash))
+		if err != nil {
+			return nil, err
+		}
+
+		return &types.Header{
+			Hash:       common.ToHex(header.Hash),
 			ParentHash: common.ToHex(header.ParentHash),
 			Number:     header.Number,
 			Time:       header.Time,
@@ -427,6 +372,18 @@ func (c *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.He
 			Number:     header.Number,
 			Time:       header.Time,
 		}, nil
+	case chainIDZKSync:
+		header, err := c.zksyncClient.HeaderByNumber(ctx, number)
+		if err != nil {
+			return nil, err
+		}
+
+		return &types.Header{
+			Hash:       common.ToHex(header.Hash),
+			ParentHash: common.ToHex(header.ParentHash),
+			Number:     header.Number,
+			Time:       header.Time,
+		}, nil
 	default:
 		header, err := c.ethClient.HeaderByNumber(ctx, number)
 		if err != nil {
@@ -440,4 +397,81 @@ func (c *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.He
 			Time:       header.Time,
 		}, nil
 	}
+}
+
+func toEthereumFilterQuery(q FilterQuery) ethereum.FilterQuery {
+	var blockHash *ethcommon.Hash
+	if q.BlockHash != nil {
+		hash := ethcommon.HexToHash(*q.BlockHash)
+		blockHash = &hash
+	}
+
+	addresses := make([]ethcommon.Address, 0, len(q.Addresses))
+	for _, address := range q.Addresses {
+		addresses = append(addresses, ethcommon.HexToAddress(address))
+	}
+
+	topics := make([][]ethcommon.Hash, 0, len(q.Topics))
+	for i, ts := range q.Topics {
+		topics[i] = make([]ethcommon.Hash, 0, len(ts))
+		for _, t := range ts {
+			topics[i] = append(topics[i], ethcommon.HexToHash(t))
+		}
+	}
+
+	return ethereum.FilterQuery{
+		BlockHash: blockHash,
+		FromBlock: q.FromBlock,
+		ToBlock:   q.ToBlock,
+		Addresses: addresses,
+		Topics:    topics,
+	}
+}
+
+func fromEthereumLogs(logs []ethtypes.Log) []types.Log {
+	res := make([]types.Log, 0, len(logs))
+	for _, log := range logs {
+		topics := make([]string, 0, len(log.Topics))
+		for _, topic := range log.Topics {
+			topics = append(topics, common.ToHex(topic))
+		}
+
+		res = append(res, types.Log{
+			Address:     common.ToHex(log.Address),
+			Topics:      topics,
+			Data:        log.Data,
+			BlockNumber: log.BlockNumber,
+			TxHash:      common.ToHex(log.TxHash),
+			TxIndex:     log.TxIndex,
+			BlockHash:   common.ToHex(log.BlockHash),
+			Index:       log.Index,
+			Removed:     log.Removed,
+		})
+	}
+
+	return res
+}
+
+func fromAvalancheLogs(logs []avaxtypes.Log) []types.Log {
+	res := make([]types.Log, 0, len(logs))
+	for _, log := range logs {
+		topics := make([]string, 0, len(log.Topics))
+		for _, topic := range log.Topics {
+			topics = append(topics, common.ToHex(topic))
+		}
+
+		res = append(res, types.Log{
+			Address:     common.ToHex(log.Address),
+			Topics:      topics,
+			Data:        log.Data,
+			BlockNumber: log.BlockNumber,
+			TxHash:      common.ToHex(log.TxHash),
+			TxIndex:     log.TxIndex,
+			BlockHash:   common.ToHex(log.BlockHash),
+			Index:       log.Index,
+			Removed:     log.Removed,
+		})
+	}
+
+	return res
 }
