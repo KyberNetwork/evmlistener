@@ -107,10 +107,19 @@ func (h *Handler) getBlock(ctx context.Context, hash string) (types.Block, error
 	}
 
 	if !errors.Is(err, errors.ErrNotFound) {
+		h.l.Errorw("Fail to get block from redis", "hash", hash, "error", err)
+
 		return types.Block{}, err
 	}
 
-	return getBlockByHash(ctx, h.evmClient, hash)
+	b, err = getBlockByHash(ctx, h.evmClient, hash)
+	if err != nil {
+		h.l.Errorw("Fail to get block from ndoe", "hash", hash, "error", err)
+
+		return types.Block{}, err
+	}
+
+	return b, nil
 }
 
 func (h *Handler) findReorgBlocks(
