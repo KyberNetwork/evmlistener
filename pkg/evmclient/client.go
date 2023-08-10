@@ -113,7 +113,7 @@ func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
 	}
 }
 
-//nolint:cyclop,ireturn
+//nolint:cyclop,ireturn,funlen,gocognit
 func (c *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (Subscription, error) {
 	switch c.chainID {
 	case chainIDFantom:
