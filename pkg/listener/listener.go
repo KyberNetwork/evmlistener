@@ -10,6 +10,7 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
+	"github.com/ethereum/go-ethereum"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
@@ -188,9 +189,10 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 			b, err := l.handleNewHeader(ctx, header)
 			if err != nil {
 				l.l.Errorw("Fail to handle new head", "header", header, "error", err)
-			} else {
-				l.publishBlock(blockCh, &b)
+				return err
 			}
+
+			l.publishBlock(blockCh, &b)
 		}
 	}
 }
@@ -202,10 +204,12 @@ func (l *Listener) syncBlocks(ctx context.Context, blockCh chan types.Block) err
 			return nil
 		}
 
-		l.l.Errorw("Fail to subscribe new block head", "error", err)
+		l.l.Errorw("Error occur while sync blocks", "error", err)
 		if !websocket.IsCloseError(err, websocket.CloseAbnormalClosure,
 			websocket.CloseNormalClosure, websocket.CloseServiceRestart) &&
-			!errors.Is(err, syscall.ECONNRESET) {
+			!errors.Is(err, syscall.ECONNRESET) &&
+			!errors.Is(err, ethereum.NotFound) &&
+			err.Error() != errStringUnknownBlock {
 			return err
 		}
 
