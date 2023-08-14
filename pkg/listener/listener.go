@@ -189,6 +189,7 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 			b, err := l.handleNewHeader(ctx, header)
 			if err != nil {
 				l.l.Errorw("Fail to handle new head", "header", header, "error", err)
+
 				return err
 			}
 
