@@ -24,6 +24,10 @@ func getLogsByBlockHash(
 	for i := 0; i < 3; i++ {
 		logs, err = evmClient.FilterLogs(ctx, evmclient.FilterQuery{BlockHash: &hash})
 		if err == nil {
+			if len(logs) == 0 {
+				continue
+			}
+
 			return logs, nil
 		}
 
@@ -34,7 +38,7 @@ func getLogsByBlockHash(
 		time.Sleep(defaultRetryInterval)
 	}
 
-	return nil, err
+	return logs, err
 }
 
 func getBlocks(
