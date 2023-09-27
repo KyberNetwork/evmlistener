@@ -7,6 +7,7 @@ import (
 	"os/signal"
 
 	libapp "github.com/KyberNetwork/evmlistener/internal/app"
+	_ "github.com/KyberNetwork/kyber-trace-go/tools"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )
