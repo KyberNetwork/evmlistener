@@ -10,13 +10,19 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
+	pkgmetric "github.com/KyberNetwork/kyber-trace-go/pkg/metric"
 	"github.com/ethereum/go-ethereum"
 	"github.com/gorilla/websocket"
+	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
 )
 
 const (
 	bufLen = 10000
+
+	metricNameLastReceivedBlockNumber = "last-received-block-number"
+	metricNameLastCheckedBlockNumber  = "last-checked-block-number"
+	metricNameLastHandledBlockNumber  = "last-handled-block-number"
 )
 
 // Listener represents a listener service for on-chain events.
@@ -27,11 +33,14 @@ type Listener struct {
 	httpEVMClient evmclient.IClient
 	handler       *Handler
 
-	mu                  sync.Mutex
 	sanityEVMClient     evmclient.IClient
 	sanityCheckInterval time.Duration
-	lastHeader          *types.Header
-	resuming            bool
+
+	mu                     sync.Mutex
+	lastReceivedBlock      *types.Block
+	lastHandledBlockNumber *big.Int
+	lastCheckedBlockNumber *big.Int
+	resuming               bool
 
 	queue       *Queue
 	maxQueueLen int
@@ -141,6 +150,10 @@ func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Bl
 			return err
 		}
 
+		l.mu.Lock()
+		l.lastReceivedBlock = &block
+		l.mu.Unlock()
+
 		l.publishBlock(blockCh, &block)
 	}
 
@@ -180,11 +193,6 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 			return err
 		case header := <-headerCh:
 			l.l.Debugw("Receive new head of the chain", "header", header)
-			l.mu.Lock()
-			if l.lastHeader == nil || l.lastHeader.Time < header.Time {
-				l.lastHeader = header
-			}
-			l.mu.Unlock()
 
 			b, err := l.handleNewHeader(ctx, header)
 			if err != nil {
@@ -192,6 +200,12 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 
 				return err
 			}
+
+			l.mu.Lock()
+			if l.lastReceivedBlock == nil || l.lastReceivedBlock.Timestamp < b.Timestamp {
+				l.lastReceivedBlock = &b
+			}
+			l.mu.Unlock()
 
 			l.publishBlock(blockCh, &b)
 		}
@@ -252,6 +266,7 @@ func (l *Listener) Run(ctx context.Context) error {
 		}
 	}()
 
+	// Synchronize blocks from node.
 	blockCh := make(chan types.Block, bufLen)
 	go func() {
 		err := l.syncBlocks(ctx, blockCh)
@@ -261,6 +276,12 @@ func (l *Listener) Run(ctx context.Context) error {
 
 		close(blockCh)
 	}()
+
+	if err := l.startMetricsCollector(ctx); err != nil {
+		l.l.Errorw("Fail to start metrics collector", "error", err)
+
+		return err
+	}
 
 	l.l.Info("Start handling for new blocks")
 	for b := range blockCh {
@@ -272,34 +293,106 @@ func (l *Listener) Run(ctx context.Context) error {
 
 			return err
 		}
+
+		l.mu.Lock()
+		l.lastHandledBlockNumber = b.Number
+		l.mu.Unlock()
+	}
+
+	return nil
+}
+
+func (l *Listener) startMetricsCollector(_ context.Context) error {
+	// Register callback for collecting last received block number.
+	_, err := pkgmetric.Meter().Int64ObservableGauge(
+		metricNameLastReceivedBlockNumber,
+		metric.WithInt64Callback(func(_ context.Context, obsrv metric.Int64Observer) error {
+			l.mu.Lock()
+			lastReceivedBlockNumber := l.lastReceivedBlock.Number
+			l.mu.Unlock()
+
+			if lastReceivedBlockNumber != nil {
+				obsrv.Observe(lastReceivedBlockNumber.Int64())
+			}
+
+			return nil
+		}),
+	)
+	if err != nil {
+		l.l.Errorw("Fail to register metrics collector for last received block number", "error", err)
+
+		return err
+	}
+
+	// Register callback for collecting last handled block number.
+	_, err = pkgmetric.Meter().Int64ObservableGauge(
+		metricNameLastHandledBlockNumber,
+		metric.WithInt64Callback(func(_ context.Context, obsrv metric.Int64Observer) error {
+			l.mu.Lock()
+			lastHandledBlockNumber := l.lastHandledBlockNumber
+			l.mu.Unlock()
+
+			if lastHandledBlockNumber != nil {
+				obsrv.Observe(lastHandledBlockNumber.Int64())
+			}
+
+			return nil
+		}),
+	)
+	if err != nil {
+		l.l.Errorw("Fail to register metrics collector for last handled block number", "error", err)
+
+		return err
+	}
+
+	// Register callback for collecting last checked block number.
+	_, err = pkgmetric.Meter().Int64ObservableGauge(
+		metricNameLastCheckedBlockNumber,
+		metric.WithInt64Callback(func(_ context.Context, obsrv metric.Int64Observer) error {
+			l.mu.Lock()
+			lastCheckedBlockNumber := l.lastCheckedBlockNumber
+			l.mu.Unlock()
+
+			if lastCheckedBlockNumber != nil {
+				obsrv.Observe(lastCheckedBlockNumber.Int64())
+			}
+
+			return nil
+		}),
+	)
+	if err != nil {
+		l.l.Errorw("Fail to register metrics collector for last checked block number", "error", err)
+
+		return err
 	}
 
 	return nil
 }
 
 func (l *Listener) sanityCheck(ctx context.Context, validSecond uint64) error {
-	l.mu.Lock()
-	lastHeader := l.lastHeader
-	l.mu.Unlock()
-	if lastHeader == nil {
-		return nil
-	}
-
 	header, err := getHeaderByNumber(ctx, l.sanityEVMClient, nil)
 	if err != nil {
 		return err
 	}
 
+	l.mu.Lock()
+	l.lastCheckedBlockNumber = header.Number
+	lastBlock := l.lastReceivedBlock
+	l.mu.Unlock()
+	if lastBlock == nil {
+		return nil
+	}
+
 	if l.isResuming() {
 		// Catchup to the lastest block.
-		if lastHeader.Time >= header.Time-validSecond {
+		if lastBlock.Timestamp >= header.Time-validSecond {
 			l.setResuming(false)
 		}
 
 		return nil
 	}
 
-	if lastHeader.Time < header.Time-validSecond {
+	if lastBlock.Timestamp < header.Time-validSecond {
 		return errors.New("sanity check failed")
 	}
 
