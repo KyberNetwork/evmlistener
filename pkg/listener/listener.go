@@ -20,9 +20,9 @@ import (
 const (
 	bufLen = 10000
 
-	metricNameLastReceivedBlockNumber = "last-received-block-number"
-	metricNameLastCheckedBlockNumber  = "last-checked-block-number"
-	metricNameLastHandledBlockNumber  = "last-handled-block-number"
+	metricNameLastReceivedBlockNumber = "evmlistener_last_received_block_number"
+	metricNameLastCheckedBlockNumber  = "evmlistener_last_checked_block_number"
+	metricNameLastHandledBlockNumber  = "evmlistener_last_handled_block_number"
 )
 
 // Listener represents a listener service for on-chain events.
@@ -277,11 +277,15 @@ func (l *Listener) Run(ctx context.Context) error {
 		close(blockCh)
 	}()
 
+	// Start metrics collector.
 	if err := l.startMetricsCollector(ctx); err != nil {
 		l.l.Errorw("Fail to start metrics collector", "error", err)
 
 		return err
 	}
+	defer func() { //nolint:contextcheck
+		_ = pkgmetric.Flush(context.Background())
+	}()
 
 	l.l.Info("Start handling for new blocks")
 	for b := range blockCh {
