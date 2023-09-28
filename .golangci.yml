@@ -28,6 +28,9 @@ linters:
     - testpackage
     - tagliatelle
     - goerr113
+    - depguard
+    - revive
+    - forbidigo
 
 linters-settings:
   funlen:

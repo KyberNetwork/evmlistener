@@ -104,18 +104,22 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 }
 
 const (
-	chainIDEthereum   = 1
-	chainIDOptimism   = 10
-	chainIDCronos     = 25
-	chainIDBSC        = 56
-	chainIDVelas      = 106
-	chainIDPolygon    = 137
-	chainIDBitTorrent = 199
-	chainIDFantom     = 250
-	chainIDArbitrum   = 42161
-	chainIDOasis      = 42262
-	chainIDAvalanche  = 43114
-	chainIDAurora     = 1313161554
+	chainIDEthereum     = 1
+	chainIDOptimism     = 10
+	chainIDCronos       = 25
+	chainIDBSC          = 56
+	chainIDVelas        = 106
+	chainIDPolygon      = 137
+	chainIDBitTorrent   = 199
+	chainIDFantom       = 250
+	chainIDZKSyncEra    = 324
+	chainIDPolygonZKEVM = 1101
+	chainIDBase         = 8453
+	chainIDArbitrum     = 42161
+	chainIDOasis        = 42262
+	chainIDAvalanche    = 43114
+	chainIDLinea        = 59144
+	chainIDAurora       = 1313161554
 )
 
 //nolint:cyclop
@@ -145,6 +149,14 @@ func chainIDToName(chainID int64) string {
 		return "Avalanche"
 	case chainIDAurora:
 		return "Aurora"
+	case chainIDLinea:
+		return "Linea"
+	case chainIDPolygonZKEVM:
+		return "Polygon zkEVM"
+	case chainIDZKSyncEra:
+		return "zkSync Era"
+	case chainIDBase:
+		return "Base"
 	default:
 		return strconv.FormatInt(chainID, 10)
 	}
