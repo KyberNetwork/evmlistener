@@ -9,8 +9,8 @@ require (
 	github.com/emirpasic/gods v1.18.1
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/getsentry/sentry-go v0.18.0
-	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gorilla/websocket v1.5.0
+	github.com/redis/go-redis/v9 v9.2.1
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.17.2-0.20221006022127-8f469abc00aa
 	go.opentelemetry.io/otel/metric v1.17.0
