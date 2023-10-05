@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 // Config ...
