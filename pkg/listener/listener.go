@@ -15,10 +15,12 @@ import (
 	"github.com/gorilla/websocket"
 	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
-	bufLen = 10000
+	bufLen         = 10000
+	blockBatchSize = 10
 
 	metricNameLastReceivedBlockNumber = "evmlistener_last_received_block_number"
 	metricNameLastCheckedBlockNumber  = "evmlistener_last_checked_block_number"
@@ -119,6 +121,33 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (t
 	return headerToBlock(header, logs), nil
 }
 
+func (l *Listener) getBlocks(ctx context.Context, fromBlock, toBlock uint64) ([]types.Block, error) {
+	g, ctx := errgroup.WithContext(ctx)
+
+	blocks := make([]types.Block, toBlock-fromBlock+1)
+	for i := fromBlock; i <= toBlock; i++ {
+		i := i
+		g.Go(func() error {
+			block, err := getBlockByNumber(ctx, l.httpEVMClient, new(big.Int).SetUint64(i))
+			if err != nil {
+				l.l.Errorw("Fail to get block by number", "number", i, "error", err)
+
+				return err
+			}
+
+			blocks[i-fromBlock] = block
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	return blocks, nil
+}
+
 func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Block) error {
 	blockNumber, err := l.httpEVMClient.BlockNumber(ctx)
 	if err != nil {
@@ -142,19 +171,27 @@ func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Bl
 	}
 
 	l.l.Infow("Synchronize for new headers", "fromBlock", fromBlock, "toBlock", blockNumber)
-	for i := fromBlock + 1; i < blockNumber; i++ {
-		block, err := getBlockByNumber(ctx, l.httpEVMClient, new(big.Int).SetUint64(i))
-		if err != nil {
-			l.l.Errorw("Fail to get block by number", "number", i, "error", err)
+	for i := fromBlock + 1; i < blockNumber; i += blockBatchSize {
+		toBlock := i + blockBatchSize - 1
+		if toBlock >= blockNumber {
+			toBlock = blockNumber - 1
+		}
 
+		l.l.Infow("Get blocks from node", "from", i, "to", toBlock)
+		blocks, err := l.getBlocks(ctx, i, toBlock)
+		if err != nil {
 			return err
 		}
 
-		l.mu.Lock()
-		l.lastReceivedBlock = &block
-		l.mu.Unlock()
+		if len(blocks) > 0 {
+			l.mu.Lock()
+			l.lastReceivedBlock = &blocks[len(blocks)-1]
+			l.mu.Unlock()
+		}
 
-		l.publishBlock(blockCh, &block)
+		for i := range blocks {
+			l.publishBlock(blockCh, &blocks[i])
+		}
 	}
 
 	l.l.Infow("Finish synchronize blocks", "fromBlock", fromBlock, "toBlock", blockNumber)
