@@ -125,17 +125,18 @@ func (l *Listener) getBlocks(ctx context.Context, fromBlock, toBlock uint64) ([]
 	g, ctx := errgroup.WithContext(ctx)
 
 	blocks := make([]types.Block, toBlock-fromBlock+1)
-	for i := fromBlock; i <= toBlock; i++ {
+	for i := range blocks {
 		i := i
+		blkNum := uint64(i) + fromBlock
 		g.Go(func() error {
-			block, err := getBlockByNumber(ctx, l.httpEVMClient, new(big.Int).SetUint64(i))
+			block, err := getBlockByNumber(ctx, l.httpEVMClient, new(big.Int).SetUint64(blkNum))
 			if err != nil {
-				l.l.Errorw("Fail to get block by number", "number", i, "error", err)
+				l.l.Errorw("Fail to get block by number", "number", blkNum, "error", err)
 
 				return err
 			}
 
-			blocks[i-fromBlock] = block
+			blocks[i] = block
 
 			return nil
 		})
@@ -170,9 +171,11 @@ func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Bl
 		return nil
 	}
 
+	const batchSize = 32
+
 	l.l.Infow("Synchronize for new headers", "fromBlock", fromBlock, "toBlock", blockNumber)
-	for i := fromBlock + 1; i < blockNumber; i += blockBatchSize {
-		toBlock := i + blockBatchSize - 1
+	for i := fromBlock + 1; i < blockNumber; i += batchSize {
+		toBlock := i + batchSize - 1
 		if toBlock >= blockNumber {
 			toBlock = blockNumber - 1
 		}
