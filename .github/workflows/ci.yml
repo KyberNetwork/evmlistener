@@ -29,7 +29,7 @@ jobs:
       branch_tag: ${{ steps.get_tag.outputs.branch_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Extract branch
         shell: bash
@@ -77,7 +77,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v3
         with:
-          go-version: "1.19.x"
+          go-version: "1.21.x"
       - name: Checkout
         uses: actions/checkout@v3
       - name: golangci-lint
@@ -99,11 +99,11 @@ jobs:
           - 6379:6379
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: "1.19.x"
+          go-version: "1.21.x"
       - name: Run test
         run: go test -race -v ./...
 
@@ -118,7 +118,7 @@ jobs:
       - prepare
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@master
@@ -135,13 +135,13 @@ jobs:
         run: gcloud auth configure-docker
 
       - name: Cache Docker layers
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-${{ env.SERVICE }}-buildx
 
       - name: Docker build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
