@@ -1,6 +1,8 @@
 module github.com/KyberNetwork/evmlistener
 
-go 1.19
+go 1.21.0
+
+toolchain go1.21.1
 
 require (
 	github.com/KyberNetwork/kyber-trace-go v0.1.0
@@ -15,6 +17,7 @@ require (
 	github.com/urfave/cli/v2 v2.17.2-0.20221006022127-8f469abc00aa
 	go.opentelemetry.io/otel/metric v1.17.0
 	go.uber.org/zap v1.24.0
+	golang.org/x/sync v0.1.0
 )
 
 require (
