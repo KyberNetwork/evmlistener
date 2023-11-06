@@ -351,11 +351,11 @@ func (l *Listener) startMetricsCollector(_ context.Context) error {
 		metricNameLastReceivedBlockNumber,
 		metric.WithInt64Callback(func(_ context.Context, obsrv metric.Int64Observer) error {
 			l.mu.Lock()
-			lastReceivedBlockNumber := l.lastReceivedBlock.Number
+			lastReceivedBlock := l.lastReceivedBlock
 			l.mu.Unlock()
 
-			if lastReceivedBlockNumber != nil {
-				obsrv.Observe(lastReceivedBlockNumber.Int64())
+			if lastReceivedBlock != nil && lastReceivedBlock.Number != nil {
+				obsrv.Observe(lastReceivedBlock.Number.Int64())
 			}
 
 			return nil
