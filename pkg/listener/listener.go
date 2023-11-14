@@ -21,6 +21,8 @@ import (
 const (
 	bufLen = 10000
 
+	maxQueueLen = 256
+
 	metricNameLastReceivedBlockNumber = "evmlistener_last_received_block_number"
 	metricNameLastCheckedBlockNumber  = "evmlistener_last_checked_block_number"
 	metricNameLastHandledBlockNumber  = "evmlistener_last_handled_block_number"
@@ -62,27 +64,26 @@ func New(
 
 		sanityEVMClient:     sanityEVMClient,
 		sanityCheckInterval: sanityCheckInterval,
+
+		queue:       NewQueue(maxQueueLen),
+		maxQueueLen: maxQueueLen,
 	}
 }
 
-func (l *Listener) publishBlock(ch chan<- types.Block, block *types.Block) {
+func (l *Listener) publishBlock(ch chan<- types.Block, seq uint64, block *types.Block) {
 	if l.queue == nil {
 		ch <- *block
 
 		return
 	}
 
-	baseBlockNumber := l.queue.BlockNumber()
-	blockNumber := block.Number.Uint64()
-
-	if blockNumber < baseBlockNumber {
-		ch <- *block
-
+	expectedSeq := l.queue.SequenceNumber()
+	if seq < expectedSeq {
 		return
 	}
 
-	if int(blockNumber-baseBlockNumber) >= l.maxQueueLen {
-		for i := 0; i <= int(blockNumber-baseBlockNumber)-l.maxQueueLen; i++ {
+	if int(seq-expectedSeq) >= l.maxQueueLen {
+		for i := 0; i <= int(seq-expectedSeq)-l.maxQueueLen; i++ {
 			b, _ := l.queue.Dequeue()
 			if b != nil {
 				ch <- *b
@@ -90,7 +91,7 @@ func (l *Listener) publishBlock(ch chan<- types.Block, block *types.Block) {
 		}
 	}
 
-	l.queue.Insert(block)
+	l.queue.Insert(seq, block)
 	for !l.queue.Empty() {
 		b, _ := l.queue.Peek()
 		if b == nil {
@@ -192,7 +193,7 @@ func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Bl
 		}
 
 		for i := range blocks {
-			l.publishBlock(blockCh, &blocks[i])
+			blockCh <- blocks[i]
 		}
 	}
 
@@ -220,6 +221,7 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 		return err
 	}
 
+	seq := uint64(1)
 	for {
 		select {
 		case <-ctx.Done():
@@ -233,20 +235,27 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 		case header := <-headerCh:
 			l.l.Debugw("Receive new head of the chain", "header", header)
 
-			b, err := l.handleNewHeader(ctx, header)
-			if err != nil {
-				l.l.Errorw("Fail to handle new head", "header", header, "error", err)
-
-				return err
-			}
-
 			l.mu.Lock()
-			if l.lastReceivedBlock == nil || l.lastReceivedBlock.Timestamp < b.Timestamp {
-				l.lastReceivedBlock = &b
+			if l.lastReceivedBlock == nil || l.lastReceivedBlock.Timestamp < header.Time {
+				l.lastReceivedBlock = &types.Block{
+					Number:     header.Number,
+					Hash:       header.Hash,
+					Timestamp:  header.Time,
+					ParentHash: header.ParentHash,
+				}
 			}
 			l.mu.Unlock()
 
-			l.publishBlock(blockCh, &b)
+			go func(seq uint64, head *types.Header) {
+				b, err := l.handleNewHeader(ctx, head)
+				if err != nil {
+					l.l.Fatalw("Fail to handle new head", "header", header, "error", err)
+				}
+
+				l.publishBlock(blockCh, seq, &b)
+			}(seq, header)
+
+			seq++
 		}
 	}
 }
@@ -282,17 +291,6 @@ func (l *Listener) Run(ctx context.Context) error {
 		l.l.Errorw("Fail to init handler", "error", err)
 
 		return err
-	}
-
-	if l.queue != nil {
-		head, err := l.handler.blockKeeper.Head()
-		if err != nil {
-			l.l.Errorw("Fail to get block head", "error", err)
-
-			return err
-		}
-
-		l.queue.SetBlockNumber(head.Number.Uint64() + 1)
 	}
 
 	l.setResuming(true)
