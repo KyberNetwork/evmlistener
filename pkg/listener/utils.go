@@ -8,6 +8,7 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
+	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 	"github.com/ethereum/go-ethereum"
 )
 
@@ -39,6 +40,30 @@ func getLogsByBlockHash(
 	}
 
 	return logs, err
+}
+
+// getTxnByBlockHash returns transactions by block hash, retry up to 3 times.
+func getTxnByBlockHash(
+	ctx context.Context, evmClient evmclient.IClient, hash string,
+) (txns []*pb.TransactionTrace, err error) {
+	for i := 0; i < 3; i++ {
+		txns, err = evmClient.TxnByHash(ctx, hash)
+		if err == nil {
+			if len(txns) == 0 {
+				continue
+			}
+
+			return txns, nil
+		}
+
+		if errors.Is(err, ethereum.NotFound) && err.Error() != errStringUnknownBlock {
+			return nil, err
+		}
+
+		time.Sleep(defaultRetryInterval)
+	}
+
+	return txns, err
 }
 
 func getBlocks(

@@ -12,6 +12,7 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/common"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
+	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 )
@@ -34,6 +35,11 @@ type EVMClientMock struct {
 	logsMap    map[ethcommon.Hash][]ethtypes.Log
 	subHeadChs []chan<- *types.Header
 	subs       []*ClientSubscription
+}
+
+func (c *EVMClientMock) TxnByHash(ctx context.Context, s string) ([]*pb.TransactionTrace, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func NewEVMClientMock(dataFile string) (*EVMClientMock, error) {

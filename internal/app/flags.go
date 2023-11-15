@@ -112,6 +112,20 @@ var (
 		Value:   7200, //nolint:gomnd
 		Usage:   "Maximum length for publisher's queue. Default: 7200",
 	}
+	pubsubOrderingKeyFlag = &cli.StringFlag{
+		Name:     "pubsub-ordering-key",
+		EnvVars:  []string{"PUBSUB_ORDERING_KEY"},
+		Value:    "",
+		Required: false,
+		Usage:    "Ordering key of pubsub to publish message in order (required for pubsub)",
+	}
+	pubsubProjectIDFlag = &cli.StringFlag{
+		Name:     "pubsub-project-id",
+		EnvVars:  []string{"PUBSUB_PROJECT_ID"},
+		Value:    "",
+		Required: false,
+		Usage:    "Project id of pubsub to publish message to (required for pubsub)",
+	}
 
 	maxNumBlocksFlag = &cli.IntFlag{
 		Name:    "max-num-blocks",
@@ -124,6 +138,13 @@ var (
 		EnvVars: []string{"BLOCK_EXPIRATION"},
 		Value:   24 * time.Hour, //nolint:gomnd
 		Usage:   "Expiration time for storing block into datastore. Default: 24h",
+	}
+
+	isFullBlockFlowFlag = &cli.BoolFlag{
+		Name:    "is-full-block-flow",
+		EnvVars: []string{"IS_FULL_BLOCK_FLOW"},
+		Value:   false,
+		Usage:   "True if running in mode extract full block data. Default: false",
 	}
 )
 
@@ -143,12 +164,17 @@ func NewRedisFlags() []cli.Flag {
 
 // NewPublisherFlags returns flags for publishers.
 func NewPublisherFlags() []cli.Flag {
-	return []cli.Flag{publisherMaxLenFlag, publisherTopicFlag}
+	return []cli.Flag{publisherMaxLenFlag, publisherTopicFlag, pubsubProjectIDFlag, pubsubOrderingKeyFlag}
 }
 
 // NewBlockKeeperFlags returns flags for block keeper.
 func NewBlockKeeperFlags() []cli.Flag {
 	return []cli.Flag{maxNumBlocksFlag, blockExpirationFlag}
+}
+
+// NewAppModeFlags returns flags for which app mode is running.
+func NewAppModeFlags() []cli.Flag {
+	return []cli.Flag{isFullBlockFlowFlag}
 }
 
 // NewFlags returns all flags for the application.
@@ -164,6 +190,7 @@ func NewFlags() []cli.Flag {
 	flags = append(flags, NewRedisFlags()...)
 	flags = append(flags, NewPublisherFlags()...)
 	flags = append(flags, NewBlockKeeperFlags()...)
+	flags = append(flags, NewAppModeFlags()...)
 
 	return flags
 }

@@ -15,23 +15,25 @@ import (
 type Handler struct {
 	topic string
 
-	evmClient   evmclient.IClient
-	blockKeeper block.Keeper
-	publisher   pubsub.Publisher
-	l           *zap.SugaredLogger
+	evmClient         evmclient.IClient
+	blockKeeper       block.Keeper
+	publisher         pubsub.Publisher
+	isHandleFullBlock bool
+	l                 *zap.SugaredLogger
 }
 
 // NewHandler ...
 func NewHandler(
 	l *zap.SugaredLogger, topic string, evmClient evmclient.IClient,
-	blockKeeper block.Keeper, publisher pubsub.Publisher,
+	blockKeeper block.Keeper, publisher pubsub.Publisher, isHandleFullBlock bool,
 ) *Handler {
 	return &Handler{
-		topic:       topic,
-		evmClient:   evmClient,
-		blockKeeper: blockKeeper,
-		publisher:   publisher,
-		l:           l,
+		topic:             topic,
+		evmClient:         evmClient,
+		blockKeeper:       blockKeeper,
+		publisher:         publisher,
+		isHandleFullBlock: isHandleFullBlock,
+		l:                 l,
 	}
 }
 
@@ -223,10 +225,8 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 		"topic", h.topic,
 		"numRevertedBlocks", len(revertedBlocks),
 		"numNewBlocks", len(newBlocks))
-	msg := types.Message{
-		RevertedBlocks: revertedBlocks,
-		NewBlocks:      newBlocks,
-	}
+	msg := h.generatePublishMsg(revertedBlocks, newBlocks)
+
 	err = h.publisher.Publish(ctx, h.topic, msg)
 	if err != nil {
 		log.Errorw("Fail to publish message", "error", err)
@@ -245,6 +245,18 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 	}
 
 	return nil
+}
+
+func (h *Handler) generatePublishMsg(revertedBlocks, newBlocks []types.Block) interface{} {
+	if h.isHandleFullBlock {
+
+	}
+
+	msg := types.Message{
+		RevertedBlocks: revertedBlocks,
+		NewBlocks:      newBlocks,
+	}
+	return msg
 }
 
 // Handle ...

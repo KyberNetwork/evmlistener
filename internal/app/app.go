@@ -7,6 +7,7 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/listener"
+	"github.com/KyberNetwork/evmlistener/pkg/pubsub"
 	"github.com/KyberNetwork/evmlistener/pkg/redis"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
@@ -95,10 +96,22 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxNumBlocks, blockExpiration)
 
 	maxLen := c.Int64(publisherMaxLenFlag.Name)
-	redisStream := redis.NewStream(redisClient, maxLen)
-
 	topic := c.String(publisherTopicFlag.Name)
-	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, redisStream)
+
+	var publisher pubsub.Publisher
+	isHandleFullBlock := c.Bool(isFullBlockFlowFlag.Name)
+	if isHandleFullBlock {
+		orderingKey := c.String(pubsubOrderingKeyFlag.Name)
+		projectID := c.String(pubsubProjectIDFlag.Name)
+		publisher, err = pubsub.NewPublisher(c.Context, projectID, orderingKey)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		publisher = redis.NewStream(redisClient, maxLen)
+	}
+
+	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher, isHandleFullBlock)
 
 	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval), nil
 }

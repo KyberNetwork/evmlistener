@@ -8,6 +8,7 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient/ftmclient"
 	zksyncclient "github.com/KyberNetwork/evmlistener/pkg/evmclient/zksync-client"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
+	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 	avaxtypes "github.com/ava-labs/coreth/core/types"
 	avaxclient "github.com/ava-labs/coreth/ethclient"
 	"github.com/ava-labs/coreth/interfaces"
@@ -49,6 +50,7 @@ type IClient interface {
 	FilterLogs(context.Context, FilterQuery) ([]types.Log, error)
 	HeaderByHash(context.Context, string) (*types.Header, error)
 	HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
+	TxnByHash(context.Context, string) ([]*pb.TransactionTrace, error)
 }
 
 type Client struct {
@@ -290,6 +292,163 @@ func (c *Client) FilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, er
 		return c.zksyncFilterLogs(ctx, q)
 	default:
 		return c.ethFilterLogs(ctx, q)
+	}
+}
+
+type Transactions struct {
+	ethtypes.Transactions
+}
+
+func (t Transactions) toProtobuf() []*pb.TransactionTrace {
+	protoTxns := make([]*pb.TransactionTrace, len(t.Transactions))
+
+	for i, txn := range t.Transactions {
+		v, r, s := txn.RawSignatureValues()
+
+		accessList := make([]*pb.AccessTuple, len(txn.AccessList()))
+		for j, a := range txn.AccessList() {
+			storageKeys := make([][]byte, 0, len(a.StorageKeys))
+			for _, s := range a.StorageKeys {
+				storageKeys = append(storageKeys, s.Bytes())
+			}
+
+			accessList[j] = &pb.AccessTuple{
+				Address:     a.Address.Bytes(),
+				StorageKeys: storageKeys,
+			}
+		}
+
+		//try to get sender from london signer
+		from, err := ethtypes.Sender(ethtypes.NewLondonSigner(tx.ChainId()), tx)
+		if err != nil {
+			//try to get sender from cancun signer
+			from, err = ethtypes.Sender(ethtypes.NewCancunSigner(tx.ChainId()), tx)
+			if err != nil {
+				continue
+			}
+		}
+		if txn.To() == nil {
+			continue
+		}
+
+		protoTxns[i] = &pb.TransactionTrace{
+			To:                   txn.To().Bytes(),
+			Nonce:                txn.Nonce(),
+			GasPrice:             &pb.BigInt{Bytes: txn.GasPrice().Bytes()},
+			GasLimit:             txn.Gas(),
+			Value:                &pb.BigInt{Bytes: txn.Value().Bytes()},
+			Input:                txn.Data(),
+			V:                    v.Bytes(),
+			R:                    r.Bytes(),
+			S:                    s.Bytes(),
+			Type:                 pb.TransactionTrace_Type(txn.Type()),
+			AccessList:           accessList,
+			MaxFeePerGas:         &pb.BigInt{Bytes: txn.GasFeeCap().Bytes()},
+			MaxPriorityFeePerGas: &pb.BigInt{Bytes: txn.GasTipCap().Bytes()},
+			Hash:                 txn.Hash().Bytes(),
+			From:                 from.Bytes(),
+			TransactionIndex:     nil, // not found in the RPC call
+			GasUsed:              0,   // not found in the RPC call
+			Receipt:              nil, // not found in the RPC call
+		}
+
+	}
+
+	return protoTxns
+}
+
+func (c *Client) TxnByHash(ctx context.Context, hash string) ([]*pb.TransactionTrace, error) {
+	switch c.chainID {
+	case chainIDFantom:
+		block, err := c.ftmClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
+		if err != nil {
+			return nil, err
+		}
+
+		txns := Transactions{
+			Transactions: block.Transactions(),
+		}
+		protoTxns := txns.toProtobuf()
+
+		return protoTxns, nil
+
+	case chainIDAvalanche:
+		block, err := c.avaxClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
+		if err != nil {
+			return nil, err
+		}
+
+		protoTxns := make([]*pb.TransactionTrace, len(block.Transactions()))
+
+		for i, txn := range block.Transactions() {
+			v, r, s := txn.RawSignatureValues()
+
+			accessList := make([]*pb.AccessTuple, len(txn.AccessList()))
+			for j, a := range txn.AccessList() {
+				storageKeys := make([][]byte, 0, len(a.StorageKeys))
+				for _, s := range a.StorageKeys {
+					storageKeys = append(storageKeys, s.Bytes())
+				}
+
+				accessList[j] = &pb.AccessTuple{
+					Address:     a.Address.Bytes(),
+					StorageKeys: storageKeys,
+				}
+			}
+
+			// TODO WARNING: this line may incorrect
+			from, _ := avaxtypes.Sender(avaxtypes.LatestSignerForChainID(txn.ChainId()), txn)
+
+			protoTxns[i] = &pb.TransactionTrace{
+				To:                   txn.To().Bytes(),
+				Nonce:                txn.Nonce(),
+				GasPrice:             &pb.BigInt{Bytes: txn.GasPrice().Bytes()},
+				GasLimit:             txn.Gas(),
+				Value:                &pb.BigInt{Bytes: txn.Value().Bytes()},
+				Input:                txn.Data(),
+				V:                    v.Bytes(),
+				R:                    r.Bytes(),
+				S:                    s.Bytes(),
+				Type:                 pb.TransactionTrace_Type(txn.Type()),
+				AccessList:           accessList,
+				MaxFeePerGas:         &pb.BigInt{Bytes: txn.GasFeeCap().Bytes()},
+				MaxPriorityFeePerGas: &pb.BigInt{Bytes: txn.GasTipCap().Bytes()},
+				Hash:                 txn.Hash().Bytes(),
+				From:                 from.Bytes(),
+				TransactionIndex:     nil, // not found in the RPC call
+				GasUsed:              0,   // not found in the RPC call
+				Receipt:              nil, // not found in the RPC call
+			}
+
+		}
+
+		return protoTxns, nil
+
+	case chainIDZKSync:
+		block, err := c.zksyncClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
+		if err != nil {
+			return nil, err
+		}
+
+		txns := Transactions{
+			Transactions: block.Transactions(),
+		}
+		protoTxns := txns.toProtobuf()
+
+		return protoTxns, nil
+
+	default:
+		block, err := c.ethClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
+		if err != nil {
+			return nil, err
+		}
+
+		txns := Transactions{
+			Transactions: block.Transactions(),
+		}
+		protoTxns := txns.toProtobuf()
+
+		return protoTxns, nil
 	}
 }
 
