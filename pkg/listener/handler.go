@@ -15,25 +15,23 @@ import (
 type Handler struct {
 	topic string
 
-	evmClient         evmclient.IClient
-	blockKeeper       block.Keeper
-	publisher         pubsub.Publisher
-	isHandleFullBlock bool
-	l                 *zap.SugaredLogger
+	evmClient   evmclient.IClient
+	blockKeeper block.Keeper
+	publisher   pubsub.Publisher
+	l           *zap.SugaredLogger
 }
 
 // NewHandler ...
 func NewHandler(
 	l *zap.SugaredLogger, topic string, evmClient evmclient.IClient,
-	blockKeeper block.Keeper, publisher pubsub.Publisher, isHandleFullBlock bool,
+	blockKeeper block.Keeper, publisher pubsub.Publisher,
 ) *Handler {
 	return &Handler{
-		topic:             topic,
-		evmClient:         evmClient,
-		blockKeeper:       blockKeeper,
-		publisher:         publisher,
-		isHandleFullBlock: isHandleFullBlock,
-		l:                 l,
+		topic:       topic,
+		evmClient:   evmClient,
+		blockKeeper: blockKeeper,
+		publisher:   publisher,
+		l:           l,
 	}
 }
 
@@ -225,13 +223,15 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 		"topic", h.topic,
 		"numRevertedBlocks", len(revertedBlocks),
 		"numNewBlocks", len(newBlocks))
-	msg := h.generatePublishMsg(revertedBlocks, newBlocks)
+	messages := h.genPublishMessages(revertedBlocks, newBlocks)
 
-	err = h.publisher.Publish(ctx, h.topic, msg)
-	if err != nil {
-		log.Errorw("Fail to publish message", "error", err)
+	for _, msg := range messages {
+		err = h.publisher.Publish(ctx, h.topic, msg)
+		if err != nil {
+			log.Errorw("Fail to publish message", "error", err)
 
-		return err
+			return err
+		}
 	}
 
 	// Add new blocks into block keeper.
@@ -247,16 +247,20 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 	return nil
 }
 
-func (h *Handler) generatePublishMsg(revertedBlocks, newBlocks []types.Block) interface{} {
-	if h.isHandleFullBlock {
+func (h *Handler) genPublishMessages(revertedBlocks, newBlocks []types.Block) []interface{} {
+	var messages []interface{}
 
+	for _, b := range newBlocks {
+		messages = append(messages, b.ToProtobuf())
 	}
 
-	msg := types.Message{
-		RevertedBlocks: revertedBlocks,
-		NewBlocks:      newBlocks,
-	}
-	return msg
+	//redis stream message
+	//messages = []interface{}{types.Message{
+	//	RevertedBlocks: revertedBlocks,
+	//	NewBlocks:      newBlocks,
+	//}}
+
+	return messages
 }
 
 // Handle ...

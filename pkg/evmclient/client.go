@@ -50,7 +50,7 @@ type IClient interface {
 	FilterLogs(context.Context, FilterQuery) ([]types.Log, error)
 	HeaderByHash(context.Context, string) (*types.Header, error)
 	HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
-	TxnByHash(context.Context, string) ([]*pb.TransactionTrace, error)
+	GetFullBlockByHash(context.Context, string) (*pb.Block, error)
 }
 
 type Client struct {
@@ -295,69 +295,7 @@ func (c *Client) FilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, er
 	}
 }
 
-type Transactions struct {
-	ethtypes.Transactions
-}
-
-func (t Transactions) toProtobuf() []*pb.TransactionTrace {
-	protoTxns := make([]*pb.TransactionTrace, len(t.Transactions))
-
-	for i, txn := range t.Transactions {
-		v, r, s := txn.RawSignatureValues()
-
-		accessList := make([]*pb.AccessTuple, len(txn.AccessList()))
-		for j, a := range txn.AccessList() {
-			storageKeys := make([][]byte, 0, len(a.StorageKeys))
-			for _, s := range a.StorageKeys {
-				storageKeys = append(storageKeys, s.Bytes())
-			}
-
-			accessList[j] = &pb.AccessTuple{
-				Address:     a.Address.Bytes(),
-				StorageKeys: storageKeys,
-			}
-		}
-
-		//try to get sender from london signer
-		from, err := ethtypes.Sender(ethtypes.NewLondonSigner(tx.ChainId()), tx)
-		if err != nil {
-			//try to get sender from cancun signer
-			from, err = ethtypes.Sender(ethtypes.NewCancunSigner(tx.ChainId()), tx)
-			if err != nil {
-				continue
-			}
-		}
-		if txn.To() == nil {
-			continue
-		}
-
-		protoTxns[i] = &pb.TransactionTrace{
-			To:                   txn.To().Bytes(),
-			Nonce:                txn.Nonce(),
-			GasPrice:             &pb.BigInt{Bytes: txn.GasPrice().Bytes()},
-			GasLimit:             txn.Gas(),
-			Value:                &pb.BigInt{Bytes: txn.Value().Bytes()},
-			Input:                txn.Data(),
-			V:                    v.Bytes(),
-			R:                    r.Bytes(),
-			S:                    s.Bytes(),
-			Type:                 pb.TransactionTrace_Type(txn.Type()),
-			AccessList:           accessList,
-			MaxFeePerGas:         &pb.BigInt{Bytes: txn.GasFeeCap().Bytes()},
-			MaxPriorityFeePerGas: &pb.BigInt{Bytes: txn.GasTipCap().Bytes()},
-			Hash:                 txn.Hash().Bytes(),
-			From:                 from.Bytes(),
-			TransactionIndex:     nil, // not found in the RPC call
-			GasUsed:              0,   // not found in the RPC call
-			Receipt:              nil, // not found in the RPC call
-		}
-
-	}
-
-	return protoTxns
-}
-
-func (c *Client) TxnByHash(ctx context.Context, hash string) ([]*pb.TransactionTrace, error) {
+func (c *Client) GetFullBlockByHash(ctx context.Context, hash string) (*pb.Block, error) {
 	switch c.chainID {
 	case chainIDFantom:
 		block, err := c.ftmClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
@@ -365,26 +303,33 @@ func (c *Client) TxnByHash(ctx context.Context, hash string) ([]*pb.TransactionT
 			return nil, err
 		}
 
-		txns := Transactions{
-			Transactions: block.Transactions(),
+		header := &pb.BlockHeader{
+			ParentHash:       block.ParentHash().Bytes(),
+			UncleHash:        block.UncleHash().Bytes(),
+			Coinbase:         block.Coinbase().Bytes(),
+			StateRoot:        block.Root().Bytes(),
+			TransactionsRoot: block.TxHash().Bytes(),
+			ReceiptRoot:      block.ReceiptHash().Bytes(),
+			LogsBloom:        block.Bloom().Bytes(),
+			Difficulty:       &pb.BigInt{Bytes: block.Difficulty().Bytes()},
+			TotalDifficulty:  nil, // TODO: not found in the RPC call
+			Number:           block.Number().Uint64(),
+			GasLimit:         block.GasLimit(),
+			GasUsed:          block.GasUsed(),
+			Timestamp:        block.Time(),
+			ExtraData:        block.Extra(),
+			MixHash:          block.MixDigest().Bytes(),
+			Nonce:            block.Nonce(),
+			Hash:             []byte(hash),
+			BaseFeePerGas:    &pb.BigInt{Bytes: block.BaseFee().Bytes()},
 		}
-		protoTxns := txns.toProtobuf()
 
-		return protoTxns, nil
+		txns := make([]*pb.TransactionTrace, len(block.Transactions()))
+		for i, tx := range block.Transactions() {
+			v, r, s := tx.RawSignatureValues()
 
-	case chainIDAvalanche:
-		block, err := c.avaxClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
-		if err != nil {
-			return nil, err
-		}
-
-		protoTxns := make([]*pb.TransactionTrace, len(block.Transactions()))
-
-		for i, txn := range block.Transactions() {
-			v, r, s := txn.RawSignatureValues()
-
-			accessList := make([]*pb.AccessTuple, len(txn.AccessList()))
-			for j, a := range txn.AccessList() {
+			accessList := make([]*pb.AccessTuple, len(tx.AccessList()))
+			for j, a := range tx.AccessList() {
 				storageKeys := make([][]byte, 0, len(a.StorageKeys))
 				for _, s := range a.StorageKeys {
 					storageKeys = append(storageKeys, s.Bytes())
@@ -396,33 +341,149 @@ func (c *Client) TxnByHash(ctx context.Context, hash string) ([]*pb.TransactionT
 				}
 			}
 
-			// TODO WARNING: this line may incorrect
-			from, _ := avaxtypes.Sender(avaxtypes.LatestSignerForChainID(txn.ChainId()), txn)
+			// TODO: should we skip tx if no from/to?
+			// try to get sender from london signer
+			from, err := ethtypes.Sender(ethtypes.NewLondonSigner(tx.ChainId()), tx)
+			if err != nil {
+				// try to get sender from latest signer
+				from, err = ethtypes.Sender(ethtypes.LatestSignerForChainID(tx.ChainId()), tx)
+				if err != nil {
+					continue
+				}
+			}
+			if tx.To() == nil {
+				continue
+			}
 
-			protoTxns[i] = &pb.TransactionTrace{
-				To:                   txn.To().Bytes(),
-				Nonce:                txn.Nonce(),
-				GasPrice:             &pb.BigInt{Bytes: txn.GasPrice().Bytes()},
-				GasLimit:             txn.Gas(),
-				Value:                &pb.BigInt{Bytes: txn.Value().Bytes()},
-				Input:                txn.Data(),
+			txns[i] = &pb.TransactionTrace{
+				To:                   tx.To().Bytes(),
+				Nonce:                tx.Nonce(),
+				GasPrice:             &pb.BigInt{Bytes: tx.GasPrice().Bytes()},
+				GasLimit:             tx.Gas(),
+				Value:                &pb.BigInt{Bytes: tx.Value().Bytes()},
+				Input:                tx.Data(),
 				V:                    v.Bytes(),
 				R:                    r.Bytes(),
 				S:                    s.Bytes(),
-				Type:                 pb.TransactionTrace_Type(txn.Type()),
+				Type:                 pb.TransactionTrace_Type(tx.Type()),
 				AccessList:           accessList,
-				MaxFeePerGas:         &pb.BigInt{Bytes: txn.GasFeeCap().Bytes()},
-				MaxPriorityFeePerGas: &pb.BigInt{Bytes: txn.GasTipCap().Bytes()},
-				Hash:                 txn.Hash().Bytes(),
+				MaxFeePerGas:         &pb.BigInt{Bytes: tx.GasFeeCap().Bytes()},
+				MaxPriorityFeePerGas: &pb.BigInt{Bytes: tx.GasTipCap().Bytes()},
+				Hash:                 tx.Hash().Bytes(),
 				From:                 from.Bytes(),
-				TransactionIndex:     nil, // not found in the RPC call
-				GasUsed:              0,   // not found in the RPC call
-				Receipt:              nil, // not found in the RPC call
+				TransactionIndex:     nil, // TODO: not found in the RPC call
+				GasUsed:              0,   // TODO: not found in the RPC call
+				Receipt:              nil, // TODO: not found in the RPC call
 			}
-
 		}
 
-		return protoTxns, nil
+		return &pb.Block{
+			Hash:              []byte(hash),
+			Number:            block.NumberU64(),
+			Header:            header,
+			Uncles:            nil, // TODO: I don't think we need this field
+			TransactionTraces: txns,
+			BalanceChanges:    nil, // TODO: I don't think we need this field
+			Logs:              nil, // This field will be fill later
+			TraceCalls:        nil, // TODO: I don't think we need this field
+			CodeChanges:       nil, // TODO: I don't think we need this field
+			Ver:               0,   // TODO: I don't think we need this field
+			Size:              0,   // TODO: I don't think we need this field
+		}, nil
+
+	case chainIDAvalanche:
+		block, err := c.avaxClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
+		if err != nil {
+			return nil, err
+		}
+
+		header := &pb.BlockHeader{
+			ParentHash:       block.ParentHash().Bytes(),
+			UncleHash:        block.UncleHash().Bytes(),
+			Coinbase:         block.Coinbase().Bytes(),
+			StateRoot:        block.Root().Bytes(),
+			TransactionsRoot: block.TxHash().Bytes(),
+			ReceiptRoot:      block.ReceiptHash().Bytes(),
+			LogsBloom:        block.Bloom().Bytes(),
+			Difficulty:       &pb.BigInt{Bytes: block.Difficulty().Bytes()},
+			TotalDifficulty:  nil, // TODO: not found in the RPC call
+			Number:           block.Number().Uint64(),
+			GasLimit:         block.GasLimit(),
+			GasUsed:          block.GasUsed(),
+			Timestamp:        block.Time(),
+			ExtraData:        block.Extra(),
+			MixHash:          block.MixDigest().Bytes(),
+			Nonce:            block.Nonce(),
+			Hash:             []byte(hash),
+			BaseFeePerGas:    &pb.BigInt{Bytes: block.BaseFee().Bytes()},
+		}
+
+		txns := make([]*pb.TransactionTrace, len(block.Transactions()))
+		for i, tx := range block.Transactions() {
+			v, r, s := tx.RawSignatureValues()
+
+			accessList := make([]*pb.AccessTuple, len(tx.AccessList()))
+			for j, a := range tx.AccessList() {
+				storageKeys := make([][]byte, 0, len(a.StorageKeys))
+				for _, s := range a.StorageKeys {
+					storageKeys = append(storageKeys, s.Bytes())
+				}
+
+				accessList[j] = &pb.AccessTuple{
+					Address:     a.Address.Bytes(),
+					StorageKeys: storageKeys,
+				}
+			}
+
+			// TODO: should we skip tx if no from/to?
+			// try to get sender from london signer
+			from, err := avaxtypes.Sender(avaxtypes.NewLondonSigner(tx.ChainId()), tx)
+			if err != nil {
+				// try to get sender from latest signer
+				from, err = avaxtypes.Sender(avaxtypes.LatestSignerForChainID(tx.ChainId()), tx)
+				if err != nil {
+					continue
+				}
+			}
+			if tx.To() == nil {
+				continue
+			}
+
+			txns[i] = &pb.TransactionTrace{
+				To:                   tx.To().Bytes(),
+				Nonce:                tx.Nonce(),
+				GasPrice:             &pb.BigInt{Bytes: tx.GasPrice().Bytes()},
+				GasLimit:             tx.Gas(),
+				Value:                &pb.BigInt{Bytes: tx.Value().Bytes()},
+				Input:                tx.Data(),
+				V:                    v.Bytes(),
+				R:                    r.Bytes(),
+				S:                    s.Bytes(),
+				Type:                 pb.TransactionTrace_Type(tx.Type()),
+				AccessList:           accessList,
+				MaxFeePerGas:         &pb.BigInt{Bytes: tx.GasFeeCap().Bytes()},
+				MaxPriorityFeePerGas: &pb.BigInt{Bytes: tx.GasTipCap().Bytes()},
+				Hash:                 tx.Hash().Bytes(),
+				From:                 from.Bytes(),
+				TransactionIndex:     nil, // TODO: not found in the RPC call
+				GasUsed:              0,   // TODO: not found in the RPC call
+				Receipt:              nil, // TODO: not found in the RPC call
+			}
+		}
+
+		return &pb.Block{
+			Hash:              []byte(hash),
+			Number:            block.NumberU64(),
+			Header:            header,
+			Uncles:            nil, // TODO: I don't think we need this field
+			TransactionTraces: txns,
+			BalanceChanges:    nil, // TODO: I don't think we need this field
+			Logs:              nil, // This field will be fill later
+			TraceCalls:        nil, // TODO: I don't think we need this field
+			CodeChanges:       nil, // TODO: I don't think we need this field
+			Ver:               0,   // TODO: I don't think we need this field
+			Size:              0,   // TODO: I don't think we need this field
+		}, nil
 
 	case chainIDZKSync:
 		block, err := c.zksyncClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
@@ -430,12 +491,93 @@ func (c *Client) TxnByHash(ctx context.Context, hash string) ([]*pb.TransactionT
 			return nil, err
 		}
 
-		txns := Transactions{
-			Transactions: block.Transactions(),
+		header := &pb.BlockHeader{
+			ParentHash:       block.ParentHash().Bytes(),
+			UncleHash:        block.UncleHash().Bytes(),
+			Coinbase:         block.Coinbase().Bytes(),
+			StateRoot:        block.Root().Bytes(),
+			TransactionsRoot: block.TxHash().Bytes(),
+			ReceiptRoot:      block.ReceiptHash().Bytes(),
+			LogsBloom:        block.Bloom().Bytes(),
+			Difficulty:       &pb.BigInt{Bytes: block.Difficulty().Bytes()},
+			TotalDifficulty:  nil, // TODO: not found in the RPC call
+			Number:           block.Number().Uint64(),
+			GasLimit:         block.GasLimit(),
+			GasUsed:          block.GasUsed(),
+			Timestamp:        block.Time(),
+			ExtraData:        block.Extra(),
+			MixHash:          block.MixDigest().Bytes(),
+			Nonce:            block.Nonce(),
+			Hash:             []byte(hash),
+			BaseFeePerGas:    &pb.BigInt{Bytes: block.BaseFee().Bytes()},
 		}
-		protoTxns := txns.toProtobuf()
 
-		return protoTxns, nil
+		txns := make([]*pb.TransactionTrace, len(block.Transactions()))
+		for i, tx := range block.Transactions() {
+			v, r, s := tx.RawSignatureValues()
+
+			accessList := make([]*pb.AccessTuple, len(tx.AccessList()))
+			for j, a := range tx.AccessList() {
+				storageKeys := make([][]byte, 0, len(a.StorageKeys))
+				for _, s := range a.StorageKeys {
+					storageKeys = append(storageKeys, s.Bytes())
+				}
+
+				accessList[j] = &pb.AccessTuple{
+					Address:     a.Address.Bytes(),
+					StorageKeys: storageKeys,
+				}
+			}
+
+			// TODO: should we skip tx if no from/to?
+			// try to get sender from london signer
+			from, err := ethtypes.Sender(ethtypes.NewLondonSigner(tx.ChainId()), tx)
+			if err != nil {
+				// try to get sender from latest signer
+				from, err = ethtypes.Sender(ethtypes.LatestSignerForChainID(tx.ChainId()), tx)
+				if err != nil {
+					continue
+				}
+			}
+			if tx.To() == nil {
+				continue
+			}
+
+			txns[i] = &pb.TransactionTrace{
+				To:                   tx.To().Bytes(),
+				Nonce:                tx.Nonce(),
+				GasPrice:             &pb.BigInt{Bytes: tx.GasPrice().Bytes()},
+				GasLimit:             tx.Gas(),
+				Value:                &pb.BigInt{Bytes: tx.Value().Bytes()},
+				Input:                tx.Data(),
+				V:                    v.Bytes(),
+				R:                    r.Bytes(),
+				S:                    s.Bytes(),
+				Type:                 pb.TransactionTrace_Type(tx.Type()),
+				AccessList:           accessList,
+				MaxFeePerGas:         &pb.BigInt{Bytes: tx.GasFeeCap().Bytes()},
+				MaxPriorityFeePerGas: &pb.BigInt{Bytes: tx.GasTipCap().Bytes()},
+				Hash:                 tx.Hash().Bytes(),
+				From:                 from.Bytes(),
+				TransactionIndex:     nil, // TODO: not found in the RPC call
+				GasUsed:              0,   // TODO: not found in the RPC call
+				Receipt:              nil, // TODO: not found in the RPC call
+			}
+		}
+
+		return &pb.Block{
+			Hash:              []byte(hash),
+			Number:            block.NumberU64(),
+			Header:            header,
+			Uncles:            nil, // TODO: I don't think we need this field
+			TransactionTraces: txns,
+			BalanceChanges:    nil, // TODO: I don't think we need this field
+			Logs:              nil, // This field will be fill later
+			TraceCalls:        nil, // TODO: I don't think we need this field
+			CodeChanges:       nil, // TODO: I don't think we need this field
+			Ver:               0,   // TODO: I don't think we need this field
+			Size:              0,   // TODO: I don't think we need this field
+		}, nil
 
 	default:
 		block, err := c.ethClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
@@ -443,12 +585,93 @@ func (c *Client) TxnByHash(ctx context.Context, hash string) ([]*pb.TransactionT
 			return nil, err
 		}
 
-		txns := Transactions{
-			Transactions: block.Transactions(),
+		header := &pb.BlockHeader{
+			ParentHash:       block.ParentHash().Bytes(),
+			UncleHash:        block.UncleHash().Bytes(),
+			Coinbase:         block.Coinbase().Bytes(),
+			StateRoot:        block.Root().Bytes(),
+			TransactionsRoot: block.TxHash().Bytes(),
+			ReceiptRoot:      block.ReceiptHash().Bytes(),
+			LogsBloom:        block.Bloom().Bytes(),
+			Difficulty:       &pb.BigInt{Bytes: block.Difficulty().Bytes()},
+			TotalDifficulty:  nil, // TODO: not found in the RPC call
+			Number:           block.Number().Uint64(),
+			GasLimit:         block.GasLimit(),
+			GasUsed:          block.GasUsed(),
+			Timestamp:        block.Time(),
+			ExtraData:        block.Extra(),
+			MixHash:          block.MixDigest().Bytes(),
+			Nonce:            block.Nonce(),
+			Hash:             []byte(hash),
+			BaseFeePerGas:    &pb.BigInt{Bytes: block.BaseFee().Bytes()},
 		}
-		protoTxns := txns.toProtobuf()
 
-		return protoTxns, nil
+		txns := make([]*pb.TransactionTrace, len(block.Transactions()))
+		for i, tx := range block.Transactions() {
+			v, r, s := tx.RawSignatureValues()
+
+			accessList := make([]*pb.AccessTuple, len(tx.AccessList()))
+			for j, a := range tx.AccessList() {
+				storageKeys := make([][]byte, 0, len(a.StorageKeys))
+				for _, s := range a.StorageKeys {
+					storageKeys = append(storageKeys, s.Bytes())
+				}
+
+				accessList[j] = &pb.AccessTuple{
+					Address:     a.Address.Bytes(),
+					StorageKeys: storageKeys,
+				}
+			}
+
+			// TODO: should we skip tx if no from/to?
+			// try to get sender from london signer
+			from, err := ethtypes.Sender(ethtypes.NewLondonSigner(tx.ChainId()), tx)
+			if err != nil {
+				// try to get sender from latest signer
+				from, err = ethtypes.Sender(ethtypes.LatestSignerForChainID(tx.ChainId()), tx)
+				if err != nil {
+					continue
+				}
+			}
+			if tx.To() == nil {
+				continue
+			}
+
+			txns[i] = &pb.TransactionTrace{
+				To:                   tx.To().Bytes(),
+				Nonce:                tx.Nonce(),
+				GasPrice:             &pb.BigInt{Bytes: tx.GasPrice().Bytes()},
+				GasLimit:             tx.Gas(),
+				Value:                &pb.BigInt{Bytes: tx.Value().Bytes()},
+				Input:                tx.Data(),
+				V:                    v.Bytes(),
+				R:                    r.Bytes(),
+				S:                    s.Bytes(),
+				Type:                 pb.TransactionTrace_Type(tx.Type()),
+				AccessList:           accessList,
+				MaxFeePerGas:         &pb.BigInt{Bytes: tx.GasFeeCap().Bytes()},
+				MaxPriorityFeePerGas: &pb.BigInt{Bytes: tx.GasTipCap().Bytes()},
+				Hash:                 tx.Hash().Bytes(),
+				From:                 from.Bytes(),
+				TransactionIndex:     nil, // TODO: not found in the RPC call
+				GasUsed:              0,   // TODO: not found in the RPC call
+				Receipt:              nil, // TODO: not found in the RPC call
+			}
+		}
+
+		return &pb.Block{
+			Hash:              []byte(hash),
+			Number:            block.NumberU64(),
+			Header:            header,
+			Uncles:            nil, // TODO: I don't think we need this field
+			TransactionTraces: txns,
+			BalanceChanges:    nil, // TODO: I don't think we need this field
+			Logs:              nil, // This field will be fill later
+			TraceCalls:        nil, // TODO: I don't think we need this field
+			CodeChanges:       nil, // TODO: I don't think we need this field
+			Ver:               0,   // TODO: I don't think we need this field
+			Size:              0,   // TODO: I don't think we need this field
+		}, nil
 	}
 }
 

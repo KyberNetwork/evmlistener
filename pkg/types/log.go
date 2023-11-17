@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -21,7 +22,7 @@ type Log struct {
 }
 
 // MarshalJSON marshals as JSON.
-func (l Log) MarshalJSON() ([]byte, error) {
+func (l *Log) MarshalJSON() ([]byte, error) {
 	type Log struct {
 		Address     string         `json:"address"`
 		Topics      []string       `json:"topics"`
@@ -101,4 +102,24 @@ func (l *Log) UnmarshalJSON(input []byte) error {
 	}
 
 	return nil
+}
+
+func (l *Log) ToProtobuf() *pb.Log {
+	topics := make([][]byte, len(l.Topics))
+
+	for i, t := range l.Topics {
+		topics[i] = []byte(t)
+	}
+
+	return &pb.Log{
+		Address:             []byte(l.Address),
+		Topics:              topics,
+		Data:                l.Data,
+		BlockHash:           []byte(l.BlockHash),
+		BlockNumber:         l.BlockNumber,
+		TransactionIndex:    uint32(l.TxIndex),
+		TransactionHash:     []byte(l.TxHash),
+		TransactionLogIndex: uint32(l.Index),
+		BlockIndex:          0, // TODO: I don't know how to get this, and is it necessary?
+	}
 }

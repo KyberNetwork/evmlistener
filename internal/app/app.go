@@ -95,23 +95,21 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	blockExpiration := c.Duration(blockExpirationFlag.Name)
 	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxNumBlocks, blockExpiration)
 
-	maxLen := c.Int64(publisherMaxLenFlag.Name)
 	topic := c.String(publisherTopicFlag.Name)
-
 	var publisher pubsub.Publisher
-	isHandleFullBlock := c.Bool(isFullBlockFlowFlag.Name)
-	if isHandleFullBlock {
-		orderingKey := c.String(pubsubOrderingKeyFlag.Name)
-		projectID := c.String(pubsubProjectIDFlag.Name)
-		publisher, err = pubsub.NewPublisher(c.Context, projectID, orderingKey)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		publisher = redis.NewStream(redisClient, maxLen)
+
+	// pubsub message queue publisher
+	orderingKey := c.String(pubsubOrderingKeyFlag.Name)
+	projectID := c.String(pubsubProjectIDFlag.Name)
+	publisher, err = pubsub.NewPublisher(c.Context, projectID, orderingKey)
+	if err != nil {
+		return nil, err
 	}
 
-	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher, isHandleFullBlock)
+	//maxLen := c.Int64(publisherMaxLenFlag.Name)
+	//publisher = redis.NewStream(redisClient, maxLen)
+
+	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher)
 
 	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval), nil
 }

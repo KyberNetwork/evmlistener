@@ -42,6 +42,12 @@ func (p *pubSubPublisher) Publish(ctx context.Context, topic string, data interf
 		return err
 	}
 
+	compressed, err := CompressWithSizePrepended(bytesData)
+	if err != nil {
+		p.logger.Errorf("compress data fail: %v", err)
+		return err
+	}
+
 	t := p.client.Topic(topic)
 	t.EnableMessageOrdering = true
 	defer t.Stop()
@@ -49,7 +55,7 @@ func (p *pubSubPublisher) Publish(ctx context.Context, topic string, data interf
 	p.logger.Infof("publishing message to topic %s", topic)
 	result := t.Publish(ctx, &pubsub.Message{
 		OrderingKey: p.orderingKey,
-		Data:        bytesData,
+		Data:        compressed,
 	})
 
 	id, err := result.Get(ctx)

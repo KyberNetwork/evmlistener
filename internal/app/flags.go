@@ -139,13 +139,6 @@ var (
 		Value:   24 * time.Hour, //nolint:gomnd
 		Usage:   "Expiration time for storing block into datastore. Default: 24h",
 	}
-
-	isFullBlockFlowFlag = &cli.BoolFlag{
-		Name:    "is-full-block-flow",
-		EnvVars: []string{"IS_FULL_BLOCK_FLOW"},
-		Value:   false,
-		Usage:   "True if running in mode extract full block data. Default: false",
-	}
 )
 
 // NewSentryFlags returns flags to init sentry client.
@@ -172,11 +165,6 @@ func NewBlockKeeperFlags() []cli.Flag {
 	return []cli.Flag{maxNumBlocksFlag, blockExpirationFlag}
 }
 
-// NewAppModeFlags returns flags for which app mode is running.
-func NewAppModeFlags() []cli.Flag {
-	return []cli.Flag{isFullBlockFlowFlag}
-}
-
 // NewFlags returns all flags for the application.
 func NewFlags() []cli.Flag {
 	flags := []cli.Flag{
@@ -190,7 +178,6 @@ func NewFlags() []cli.Flag {
 	flags = append(flags, NewRedisFlags()...)
 	flags = append(flags, NewPublisherFlags()...)
 	flags = append(flags, NewBlockKeeperFlags()...)
-	flags = append(flags, NewAppModeFlags()...)
 
 	return flags
 }

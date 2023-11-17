@@ -103,7 +103,7 @@ func (l *Listener) publishBlock(ch chan<- types.Block, seq uint64, block *types.
 	}
 }
 
-func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header, isFullBlock bool) (types.Block, error) {
+func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (types.Block, error) {
 	var err error
 	var logs []types.Log
 
@@ -116,16 +116,16 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header, is
 		return types.Block{}, err
 	}
 
-	txns, err := getTxnByBlockHash(ctx, l.httpEVMClient, header.Hash)
+	block, err := getFullBlockByHash(ctx, l.httpEVMClient, header.Hash)
 	if err != nil {
-		l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash, "error", err)
+		l.l.Errorw("Fail to get block by block hash", "hash", header.Hash, "error", err)
 
 		return types.Block{}, err
 	}
 
 	l.l.Debugw("Handle new head success", "hash", header.Hash)
 
-	return headerToBlock(header, logs, txns), nil
+	return headerToBlock(header, logs, block), nil
 }
 
 func (l *Listener) getBlocks(ctx context.Context, fromBlock, toBlock uint64) ([]types.Block, error) {

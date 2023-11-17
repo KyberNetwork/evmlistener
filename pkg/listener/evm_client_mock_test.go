@@ -37,7 +37,7 @@ type EVMClientMock struct {
 	subs       []*ClientSubscription
 }
 
-func (c *EVMClientMock) TxnByHash(ctx context.Context, s string) ([]*pb.TransactionTrace, error) {
+func (c *EVMClientMock) GetFullBlockByHash(ctx context.Context, s string) (*pb.Block, error) {
 	//TODO implement me
 	panic("implement me")
 }
