@@ -15,8 +15,8 @@ type Queue struct {
 	maxSize int
 	size    int
 
-	blockNumber uint64
-	mu          sync.Mutex
+	seq uint64
+	mu  sync.Mutex
 }
 
 // NewQueue instantiates a new empty queue with the specified size of maximum number of elements that it can hold.
@@ -26,7 +26,7 @@ func NewQueue(maxSize int) *Queue {
 		panic("Invalid maxSize, should be at least 1")
 	}
 
-	queue := &Queue{maxSize: maxSize}
+	queue := &Queue{maxSize: maxSize, seq: 1}
 	queue.clear()
 
 	return queue
@@ -37,16 +37,8 @@ func (q *Queue) insertAt(value *types.Block, idx int) {
 	q.size++
 }
 
-func (q *Queue) insert(value *types.Block) {
-	blockNumber := value.Number.Uint64()
-	if q.blockNumber == 0 {
-		q.blockNumber = blockNumber
-		q.insertAt(value, 0)
-
-		return
-	}
-
-	if blockNumber < q.blockNumber {
+func (q *Queue) insert(seq uint64, value *types.Block) {
+	if seq < q.seq {
 		return
 	}
 
@@ -54,21 +46,22 @@ func (q *Queue) insert(value *types.Block) {
 		q.dequeue()
 	}
 
-	if int(blockNumber-q.blockNumber) >= q.maxSize {
-		for i := 0; i <= int(blockNumber-q.blockNumber)-q.maxSize; i++ {
+	// Ignore missing values at the start of queue.
+	if int(seq-q.seq) >= q.maxSize {
+		for i := 0; i <= int(seq-q.seq)-q.maxSize; i++ {
 			q.dequeue()
 		}
 	}
 
-	q.insertAt(value, int(blockNumber-q.blockNumber))
+	q.insertAt(value, int(seq-q.seq))
 }
 
-// Insert inserts new block into queue relative to current block number.
-func (q *Queue) Insert(value *types.Block) {
+// Insert inserts new block into queue relative to current seq.
+func (q *Queue) Insert(seq uint64, value *types.Block) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	q.insert(value)
+	q.insert(seq, value)
 }
 
 func (q *Queue) dequeue() (*types.Block, bool) {
@@ -88,7 +81,7 @@ func (q *Queue) dequeue() (*types.Block, bool) {
 	if q.start >= q.maxSize {
 		q.start = 0
 	}
-	q.blockNumber++
+	q.seq++
 
 	return value, ok
 }
@@ -196,7 +189,7 @@ func (q *Queue) String() string {
 	qValues := q.Values()
 	values := make([]string, 0, len(qValues))
 	for _, value := range qValues {
-		values = append(values, fmt.Sprintf("%v", value))
+		values = append(values, fmt.Sprintf("%+v", value))
 	}
 
 	str += strings.Join(values, ", ")
@@ -204,18 +197,18 @@ func (q *Queue) String() string {
 	return str
 }
 
-// BlockNumber returns base block number of queue.
-func (q *Queue) BlockNumber() uint64 {
+// SequenceNumber returns current sequence number of queue.
+func (q *Queue) SequenceNumber() uint64 {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	return q.blockNumber
+	return q.seq
 }
 
-// SetBlockNumber sets base block number of queue.
-func (q *Queue) SetBlockNumber(number uint64) {
+// SetSequenceNumber sets current sequence number of queue.
+func (q *Queue) SetSequenceNumber(seq uint64) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	q.blockNumber = number
+	q.seq = seq
 }

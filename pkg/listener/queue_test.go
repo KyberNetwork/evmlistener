@@ -1,6 +1,7 @@
 package listener
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -40,25 +41,35 @@ func (ts *QueueTestSuite) TestInsertDequeue() {
 	}
 
 	for _, block := range blocks {
-		ts.queue.Insert(block)
+		ts.queue.Insert(block.Number.Uint64()-8, block)
+		fmt.Println(ts.queue.String())
 	}
 
-	ts.Require().Equal(uint64(10), ts.queue.BlockNumber())
-	ts.Require().Equal(3, ts.queue.Size())
+	ts.Require().Equal(uint64(1), ts.queue.SequenceNumber())
+	ts.Require().Equal(4, ts.queue.Size())
 
 	values := ts.queue.Values()
-	ts.Require().Equal(3, len(values))
+	ts.Require().Equal(4, len(values))
 
-	ts.Assert().Equal(blocks[0], values[0])
-	ts.Assert().Equal(blocks[1], values[1])
-	ts.Assert().Equal(blocks[3], values[2])
+	ts.Assert().Equal(blocks[2], values[0])
+	ts.Assert().Equal(blocks[0], values[1])
+	ts.Assert().Equal(blocks[1], values[2])
+	ts.Assert().Equal(blocks[3], values[3])
 
 	value, ok := ts.queue.Dequeue()
 	ts.Assert().True(ok)
 	if ts.Assert().NotNil(value) {
+		ts.Assert().Equal(blocks[2], value)
+	}
+	ts.Assert().Equal(uint64(2), ts.queue.SequenceNumber())
+	ts.Assert().Equal(3, ts.queue.Size())
+
+	value, ok = ts.queue.Dequeue()
+	ts.Assert().True(ok)
+	if ts.Assert().NotNil(value) {
 		ts.Assert().Equal(blocks[0], value)
 	}
-	ts.Assert().Equal(uint64(11), ts.queue.BlockNumber())
+	ts.Assert().Equal(uint64(3), ts.queue.SequenceNumber())
 	ts.Assert().Equal(2, ts.queue.Size())
 
 	value, ok = ts.queue.Dequeue()
@@ -66,25 +77,25 @@ func (ts *QueueTestSuite) TestInsertDequeue() {
 	if ts.Assert().NotNil(value) {
 		ts.Assert().Equal(blocks[1], value)
 	}
-	ts.Assert().Equal(uint64(12), ts.queue.BlockNumber())
+	ts.Assert().Equal(uint64(4), ts.queue.SequenceNumber())
 	ts.Assert().Equal(1, ts.queue.Size())
 
 	value, ok = ts.queue.Dequeue()
 	ts.Assert().False(ok)
 	ts.Assert().Nil(value)
-	ts.Assert().Equal(uint64(13), ts.queue.BlockNumber())
+	ts.Assert().Equal(uint64(5), ts.queue.SequenceNumber())
 	ts.Assert().Equal(1, ts.queue.Size())
 
 	value, ok = ts.queue.Dequeue()
 	ts.Assert().False(ok)
 	ts.Assert().Nil(value)
-	ts.Assert().Equal(uint64(14), ts.queue.BlockNumber())
+	ts.Assert().Equal(uint64(6), ts.queue.SequenceNumber())
 	ts.Assert().Equal(1, ts.queue.Size())
 
 	value, ok = ts.queue.Dequeue()
 	ts.Assert().False(ok)
 	ts.Assert().Nil(value)
-	ts.Assert().Equal(uint64(15), ts.queue.BlockNumber())
+	ts.Assert().Equal(uint64(7), ts.queue.SequenceNumber())
 	ts.Assert().Equal(1, ts.queue.Size())
 
 	value, ok = ts.queue.Dequeue()
@@ -92,7 +103,7 @@ func (ts *QueueTestSuite) TestInsertDequeue() {
 	if ts.Assert().NotNil(value) {
 		ts.Assert().Equal(blocks[3], value)
 	}
-	ts.Assert().Equal(uint64(16), ts.queue.BlockNumber())
+	ts.Assert().Equal(uint64(8), ts.queue.SequenceNumber())
 	ts.Assert().Equal(0, ts.queue.Size())
 }
 
