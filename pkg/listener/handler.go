@@ -247,18 +247,18 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 	return nil
 }
 
+//nolint:unparam
 func (h *Handler) genPublishMessages(revertedBlocks, newBlocks []types.Block) []interface{} {
-	var messages []interface{}
-
-	for _, b := range newBlocks {
-		messages = append(messages, b.ToProtobuf())
+	messages := make([]interface{}, len(newBlocks))
+	for i, b := range newBlocks {
+		messages[i] = b.ToProtobuf()
 	}
 
-	//redis stream message
-	//messages = []interface{}{types.Message{
+	// redis stream message
+	// messages := []interface{}{types.Message{
 	//	RevertedBlocks: revertedBlocks,
 	//	NewBlocks:      newBlocks,
-	//}}
+	// }}
 
 	return messages
 }

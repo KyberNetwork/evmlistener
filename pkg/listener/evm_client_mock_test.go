@@ -38,7 +38,7 @@ type EVMClientMock struct {
 }
 
 func (c *EVMClientMock) GetFullBlockByHash(ctx context.Context, s string) (*pb.Block, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 

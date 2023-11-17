@@ -106,8 +106,8 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		return nil, err
 	}
 
-	//maxLen := c.Int64(publisherMaxLenFlag.Name)
-	//publisher = redis.NewStream(redisClient, maxLen)
+	// maxLen := c.Int64(publisherMaxLenFlag.Name)
+	// publisher = redis.NewStream(redisClient, maxLen)
 
 	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher)
 

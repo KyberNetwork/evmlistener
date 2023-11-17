@@ -13,38 +13,41 @@ type Publisher interface {
 	Publish(ctx context.Context, topic string, data interface{}) error
 }
 
-type pubSubPublisher struct {
+type PubsubClient struct {
 	client      *pubsub.Client
 	orderingKey string
 	logger      *zap.SugaredLogger
 }
 
-func NewPublisher(ctx context.Context, projectID string, orderingKey string) (Publisher, error) {
+func NewPublisher(ctx context.Context, projectID string, orderingKey string) (*PubsubClient, error) {
 	l := zap.S()
 	l.With("orderingKey", orderingKey)
 
 	client, err := pubsub.NewClient(ctx, projectID)
 	if err != nil {
 		l.Errorf("error create new publisher: %v", err)
+
 		return nil, err
 	}
 
-	return &pubSubPublisher{
+	return &PubsubClient{
 		client: client,
 		logger: l,
 	}, nil
 }
 
-func (p *pubSubPublisher) Publish(ctx context.Context, topic string, data interface{}) error {
+func (p *PubsubClient) Publish(ctx context.Context, topic string, data interface{}) error {
 	bytesData, err := json.Marshal(data)
 	if err != nil {
 		p.logger.Errorf("marshal data to bytes err: %v", err)
+
 		return err
 	}
 
 	compressed, err := CompressWithSizePrepended(bytesData)
 	if err != nil {
 		p.logger.Errorf("compress data fail: %v", err)
+
 		return err
 	}
 
