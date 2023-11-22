@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	bufLen = 10000
+	bufLen = 100
 
 	maxQueueLen = 256
 
