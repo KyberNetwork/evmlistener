@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	bufLen = 10000
+	bufLen = 100
 
 	metricNameLastReceivedBlockNumber = "evmlistener_last_received_block_number"
 	metricNameLastCheckedBlockNumber  = "evmlistener_last_checked_block_number"
