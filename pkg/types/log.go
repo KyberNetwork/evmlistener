@@ -105,6 +105,10 @@ func (l *Log) UnmarshalJSON(input []byte) error {
 }
 
 func (l *Log) ToProtobuf() *pb.Log {
+	if l == nil {
+		return nil
+	}
+
 	topics := make([][]byte, len(l.Topics))
 
 	for i, t := range l.Topics {

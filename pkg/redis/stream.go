@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 
+	"github.com/KyberNetwork/evmlistener/internal/publisher"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -25,18 +26,20 @@ func NewStream(client *Client, maxLen int64) *Stream {
 	}
 }
 
-// Publish publishs a message to given topic.
-func (s *Stream) Publish(ctx context.Context, topic string, msg interface{}) error {
-	data, err := Encode(msg)
-	if err != nil {
-		return err
+// Publish publishes a message to given topic.
+func (s *Stream) Publish(ctx context.Context, cfg publisher.Config, data []byte, extra map[string]string) error {
+	values := []string{MessageKey, string(data)}
+	if len(extra) > 0 {
+		for k, v := range extra {
+			values = append(values, k, v)
+		}
 	}
 
 	return s.client.XAdd(ctx, &redis.XAddArgs{
-		Stream: topic,
+		Stream: cfg.Topic,
 		MaxLen: s.maxLen,
 		Approx: true,
 		ID:     "*",
-		Values: []string{MessageKey, string(data)},
+		Values: values,
 	}).Err()
 }

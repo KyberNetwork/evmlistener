@@ -2,10 +2,12 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"testing"
 
+	"github.com/KyberNetwork/evmlistener/internal/publisher"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -53,7 +55,10 @@ func (ts *StreamTestSuite) TestPublish() {
 	}
 
 	for _, test := range tests {
-		err := ts.s.Publish(context.Background(), topic, test.msg)
+		data, err := json.Marshal(test.msg)
+		ts.Require().NoError(err)
+
+		err = ts.s.Publish(context.Background(), publisher.Config{Topic: topic}, data, nil)
 		ts.Require().NoError(err)
 
 		res, err := ts.s.client.XRevRangeN(context.Background(), topic, "+", "-", 1).Result()

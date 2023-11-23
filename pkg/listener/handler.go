@@ -3,10 +3,10 @@ package listener
 import (
 	"context"
 
+	"github.com/KyberNetwork/evmlistener/internal/publisher"
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
-	"github.com/KyberNetwork/evmlistener/pkg/pubsub"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"go.uber.org/zap"
 )
@@ -17,20 +17,20 @@ type Handler struct {
 
 	evmClient   evmclient.IClient
 	blockKeeper block.Keeper
-	publisher   pubsub.Publisher
+	publishSvc  publisher.PublishService
 	l           *zap.SugaredLogger
 }
 
 // NewHandler ...
 func NewHandler(
 	l *zap.SugaredLogger, topic string, evmClient evmclient.IClient,
-	blockKeeper block.Keeper, publisher pubsub.Publisher,
+	blockKeeper block.Keeper, publishSvc publisher.PublishService,
 ) *Handler {
 	return &Handler{
 		topic:       topic,
 		evmClient:   evmClient,
 		blockKeeper: blockKeeper,
-		publisher:   publisher,
+		publishSvc:  publishSvc,
 		l:           l,
 	}
 }
@@ -219,19 +219,15 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 		newBlocks = []types.Block{b}
 	}
 
-	log.Infow("Publish message to queue",
-		"topic", h.topic,
-		"numRevertedBlocks", len(revertedBlocks),
-		"numNewBlocks", len(newBlocks))
-	messages := h.genPublishMessages(revertedBlocks, newBlocks)
+	msg := types.Message{
+		RevertedBlocks: revertedBlocks,
+		NewBlocks:      newBlocks,
+	}
+	err = h.publishSvc.Publish(ctx, msg)
+	if err != nil {
+		log.Errorw("Fail to publish message", "error", err)
 
-	for _, msg := range messages {
-		err = h.publisher.Publish(ctx, h.topic, msg)
-		if err != nil {
-			log.Errorw("Fail to publish message", "error", err)
-
-			return err
-		}
+		return err
 	}
 
 	// Add new blocks into block keeper.
@@ -245,22 +241,6 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 	}
 
 	return nil
-}
-
-//nolint:unparam
-func (h *Handler) genPublishMessages(revertedBlocks, newBlocks []types.Block) []interface{} {
-	messages := make([]interface{}, len(newBlocks))
-	for i, b := range newBlocks {
-		messages[i] = b.ToProtobuf()
-	}
-
-	// redis stream message
-	// messages := []interface{}{types.Message{
-	//	RevertedBlocks: revertedBlocks,
-	//	NewBlocks:      newBlocks,
-	// }}
-
-	return messages
 }
 
 // Handle ...

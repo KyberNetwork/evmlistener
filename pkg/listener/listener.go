@@ -125,7 +125,7 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (t
 
 	l.l.Debugw("Handle new head success", "hash", header.Hash)
 
-	return headerToBlock(header, logs, block), nil
+	return toBlock(logs, block), nil
 }
 
 func (l *Listener) getBlocks(ctx context.Context, fromBlock, toBlock uint64) ([]types.Block, error) {

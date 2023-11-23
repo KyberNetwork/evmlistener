@@ -8,7 +8,6 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 	"github.com/ethereum/go-ethereum"
 )
 
@@ -45,7 +44,7 @@ func getLogsByBlockHash(
 // getFullBlockByHash returns transactions by block hash, retry up to 3 times.
 func getFullBlockByHash(
 	ctx context.Context, evmClient evmclient.IClient, hash string,
-) (block *pb.Block, err error) {
+) (block types.Block, err error) {
 	for i := 0; i < 3; i++ {
 		block, err = evmClient.GetFullBlockByHash(ctx, hash)
 		if err == nil {
@@ -53,13 +52,13 @@ func getFullBlockByHash(
 		}
 
 		if errors.Is(err, ethereum.NotFound) && err.Error() != errStringUnknownBlock {
-			return nil, err
+			return types.Block{}, err
 		}
 
 		time.Sleep(defaultRetryInterval)
 	}
 
-	return nil, err
+	return types.Block{}, err
 }
 
 func getBlocks(
@@ -111,11 +110,6 @@ func getHeaderByHash(
 func getBlockByHash(
 	ctx context.Context, evmClient evmclient.IClient, hash string,
 ) (types.Block, error) {
-	header, err := getHeaderByHash(ctx, evmClient, hash)
-	if err != nil {
-		return types.Block{}, err
-	}
-
 	logs, err := getLogsByBlockHash(ctx, evmClient, hash)
 	if err != nil {
 		return types.Block{}, err
@@ -126,7 +120,7 @@ func getBlockByHash(
 		return types.Block{}, err
 	}
 
-	return headerToBlock(header, logs, fullBlock), nil
+	return toBlock(logs, fullBlock), nil
 }
 
 func getHeaderByNumber(
@@ -166,16 +160,11 @@ func getBlockByNumber(
 		return types.Block{}, err
 	}
 
-	return headerToBlock(header, logs, block), nil
+	return toBlock(logs, block), nil
 }
 
-func headerToBlock(header *types.Header, logs []types.Log, fullBlock *pb.Block) types.Block {
-	return types.Block{
-		Hash:       header.Hash,
-		Number:     header.Number,
-		Timestamp:  header.Time,
-		ParentHash: header.ParentHash,
-		Logs:       logs,
-		FullBlock:  fullBlock,
-	}
+func toBlock(logs []types.Log, fullBlock types.Block) types.Block {
+	fullBlock.Logs = logs
+
+	return fullBlock
 }

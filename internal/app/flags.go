@@ -126,6 +126,13 @@ var (
 		Required: false,
 		Usage:    "Project id of pubsub to publish message to (required for pubsub)",
 	}
+	publisherTypeFlag = &cli.StringFlag{
+		Name:     "publisher-type",
+		EnvVars:  []string{"PUBLISHER_TYPE"},
+		Value:    "redis-stream",
+		Required: false,
+		Usage:    "The type of the message publisher (Required)",
+	}
 
 	maxNumBlocksFlag = &cli.IntFlag{
 		Name:    "max-num-blocks",
@@ -157,7 +164,10 @@ func NewRedisFlags() []cli.Flag {
 
 // NewPublisherFlags returns flags for publishers.
 func NewPublisherFlags() []cli.Flag {
-	return []cli.Flag{publisherMaxLenFlag, publisherTopicFlag, pubsubProjectIDFlag, pubsubOrderingKeyFlag}
+	return []cli.Flag{
+		publisherMaxLenFlag, publisherTopicFlag, publisherTypeFlag, pubsubProjectIDFlag,
+		pubsubOrderingKeyFlag,
+	}
 }
 
 // NewBlockKeeperFlags returns flags for block keeper.

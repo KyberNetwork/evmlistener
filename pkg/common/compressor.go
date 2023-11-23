@@ -1,4 +1,4 @@
-package pubsub
+package common
 
 import (
 	"encoding/binary"

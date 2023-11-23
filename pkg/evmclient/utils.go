@@ -1,47 +1,46 @@
 package evmclient
 
 import (
-	"github.com/KyberNetwork/evmlistener/protobuf/pb"
+	"github.com/KyberNetwork/evmlistener/pkg/types"
 	avaxtypes "github.com/ava-labs/coreth/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 // nolint:dupl
-func ethBlockToProto(hash string, block *ethtypes.Block) *pb.Block {
-	header := &pb.BlockHeader{
-		ParentHash:       block.ParentHash().Bytes(),
-		UncleHash:        block.UncleHash().Bytes(),
-		Coinbase:         block.Coinbase().Bytes(),
-		StateRoot:        block.Root().Bytes(),
-		TransactionsRoot: block.TxHash().Bytes(),
-		ReceiptRoot:      block.ReceiptHash().Bytes(),
+func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
+	header := types.Header{
+		ParentHash:       block.ParentHash().Hex(),
+		UncleHash:        block.UncleHash(),
+		Coinbase:         block.Coinbase(),
+		StateRoot:        block.Root(),
+		TransactionsRoot: block.TxHash(),
+		ReceiptRoot:      block.ReceiptHash(),
 		LogsBloom:        block.Bloom().Bytes(),
-		Difficulty:       &pb.BigInt{Bytes: block.Difficulty().Bytes()},
-		TotalDifficulty:  nil, // TODO: not found in the RPC call
-		Number:           block.Number().Uint64(),
+		Difficulty:       block.Difficulty(),
+		Number:           block.Number(),
 		GasLimit:         block.GasLimit(),
 		GasUsed:          block.GasUsed(),
 		Timestamp:        block.Time(),
 		ExtraData:        block.Extra(),
-		MixHash:          block.MixDigest().Bytes(),
+		MixHash:          block.MixDigest(),
 		Nonce:            block.Nonce(),
-		Hash:             []byte(hash),
-		BaseFeePerGas:    &pb.BigInt{Bytes: block.BaseFee().Bytes()},
+		Hash:             hash,
+		BaseFeePerGas:    block.BaseFee(),
 	}
 
-	txns := make([]*pb.TransactionTrace, len(block.Transactions()))
+	txns := make([]types.Txn, len(block.Transactions()))
 	for i, tx := range block.Transactions() {
 		v, r, s := tx.RawSignatureValues()
 
-		accessList := make([]*pb.AccessTuple, len(tx.AccessList()))
+		accessList := make([]*types.AccessTuple, len(tx.AccessList()))
 		for j, a := range tx.AccessList() {
 			storageKeys := make([][]byte, 0, len(a.StorageKeys))
 			for _, s := range a.StorageKeys {
 				storageKeys = append(storageKeys, s.Bytes())
 			}
 
-			accessList[j] = &pb.AccessTuple{
-				Address:     a.Address.Bytes(),
+			accessList[j] = &types.AccessTuple{
+				Address:     a.Address,
 				StorageKeys: storageKeys,
 			}
 		}
@@ -60,79 +59,72 @@ func ethBlockToProto(hash string, block *ethtypes.Block) *pb.Block {
 			continue
 		}
 
-		txns[i] = &pb.TransactionTrace{
-			To:                   tx.To().Bytes(),
+		txns[i] = types.Txn{
+			To:                   *tx.To(),
 			Nonce:                tx.Nonce(),
-			GasPrice:             &pb.BigInt{Bytes: tx.GasPrice().Bytes()},
+			GasPrice:             tx.GasPrice(),
 			GasLimit:             tx.Gas(),
-			Value:                &pb.BigInt{Bytes: tx.Value().Bytes()},
+			Value:                tx.Value(),
 			Input:                tx.Data(),
 			V:                    v.Bytes(),
 			R:                    r.Bytes(),
 			S:                    s.Bytes(),
-			Type:                 pb.TransactionTrace_Type(tx.Type()),
+			Type:                 tx.Type(),
 			AccessList:           accessList,
-			MaxFeePerGas:         &pb.BigInt{Bytes: tx.GasFeeCap().Bytes()},
-			MaxPriorityFeePerGas: &pb.BigInt{Bytes: tx.GasTipCap().Bytes()},
-			Hash:                 tx.Hash().Bytes(),
-			From:                 from.Bytes(),
-			TransactionIndex:     nil, // TODO: not found in the RPC call
-			GasUsed:              0,   // TODO: not found in the RPC call
-			Receipt:              nil, // TODO: not found in the RPC call
+			MaxFeePerGas:         tx.GasFeeCap(),
+			MaxPriorityFeePerGas: tx.GasTipCap(),
+			Hash:                 tx.Hash(),
+			From:                 from,
 		}
 	}
 
-	return &pb.Block{
-		Hash:              []byte(hash),
-		Number:            block.NumberU64(),
-		Header:            header,
-		Uncles:            nil, // TODO: I don't think we need this field
-		TransactionTraces: txns,
-		BalanceChanges:    nil, // TODO: I don't think we need this field
-		Logs:              nil, // This field will be fill later
-		TraceCalls:        nil, // TODO: I don't think we need this field
-		CodeChanges:       nil, // TODO: I don't think we need this field
-		Ver:               0,   // TODO: I don't think we need this field
-		Size:              0,   // TODO: I don't think we need this field
+	return types.Block{
+		Number:       block.Number(),
+		Hash:         hash,
+		Timestamp:    header.Timestamp,
+		ParentHash:   header.ParentHash,
+		Transactions: txns,
+		Header:       header,
+		ReorgedHash:  "",  // This field will be fill later
+		Logs:         nil, // This field will be fill later
 	}
 }
 
 // nolint:dupl
-func avaxBlockToProto(hash string, block *avaxtypes.Block) *pb.Block {
-	header := &pb.BlockHeader{
-		ParentHash:       block.ParentHash().Bytes(),
-		UncleHash:        block.UncleHash().Bytes(),
-		Coinbase:         block.Coinbase().Bytes(),
-		StateRoot:        block.Root().Bytes(),
-		TransactionsRoot: block.TxHash().Bytes(),
-		ReceiptRoot:      block.ReceiptHash().Bytes(),
+func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
+	header := types.Header{
+		ParentHash:       block.ParentHash().Hex(),
+		UncleHash:        block.UncleHash(),
+		Coinbase:         block.Coinbase(),
+		StateRoot:        block.Root(),
+		TransactionsRoot: block.TxHash(),
+		ReceiptRoot:      block.ReceiptHash(),
 		LogsBloom:        block.Bloom().Bytes(),
-		Difficulty:       &pb.BigInt{Bytes: block.Difficulty().Bytes()},
-		TotalDifficulty:  nil, // TODO: not found in the RPC call
-		Number:           block.Number().Uint64(),
+		Difficulty:       block.Difficulty(),
+		Number:           block.Number(),
 		GasLimit:         block.GasLimit(),
 		GasUsed:          block.GasUsed(),
 		Timestamp:        block.Time(),
 		ExtraData:        block.Extra(),
-		MixHash:          block.MixDigest().Bytes(),
+		MixHash:          block.MixDigest(),
 		Nonce:            block.Nonce(),
-		Hash:             []byte(hash),
-		BaseFeePerGas:    &pb.BigInt{Bytes: block.BaseFee().Bytes()},
+		Hash:             hash,
+		BaseFeePerGas:    block.BaseFee(),
 	}
 
-	txns := make([]*pb.TransactionTrace, len(block.Transactions()))
+	txns := make([]types.Txn, len(block.Transactions()))
 	for i, tx := range block.Transactions() {
 		v, r, s := tx.RawSignatureValues()
 
-		accessList := make([]*pb.AccessTuple, len(tx.AccessList()))
+		accessList := make([]*types.AccessTuple, len(tx.AccessList()))
 		for j, a := range tx.AccessList() {
 			storageKeys := make([][]byte, 0, len(a.StorageKeys))
 			for _, s := range a.StorageKeys {
 				storageKeys = append(storageKeys, s.Bytes())
 			}
 
-			accessList[j] = &pb.AccessTuple{
-				Address:     a.Address.Bytes(),
+			accessList[j] = &types.AccessTuple{
+				Address:     a.Address,
 				StorageKeys: storageKeys,
 			}
 		}
@@ -151,39 +143,33 @@ func avaxBlockToProto(hash string, block *avaxtypes.Block) *pb.Block {
 			continue
 		}
 
-		txns[i] = &pb.TransactionTrace{
-			To:                   tx.To().Bytes(),
+		txns[i] = types.Txn{
+			To:                   *tx.To(),
 			Nonce:                tx.Nonce(),
-			GasPrice:             &pb.BigInt{Bytes: tx.GasPrice().Bytes()},
+			GasPrice:             tx.GasPrice(),
 			GasLimit:             tx.Gas(),
-			Value:                &pb.BigInt{Bytes: tx.Value().Bytes()},
+			Value:                tx.Value(),
 			Input:                tx.Data(),
 			V:                    v.Bytes(),
 			R:                    r.Bytes(),
 			S:                    s.Bytes(),
-			Type:                 pb.TransactionTrace_Type(tx.Type()),
+			Type:                 tx.Type(),
 			AccessList:           accessList,
-			MaxFeePerGas:         &pb.BigInt{Bytes: tx.GasFeeCap().Bytes()},
-			MaxPriorityFeePerGas: &pb.BigInt{Bytes: tx.GasTipCap().Bytes()},
-			Hash:                 tx.Hash().Bytes(),
-			From:                 from.Bytes(),
-			TransactionIndex:     nil, // TODO: not found in the RPC call
-			GasUsed:              0,   // TODO: not found in the RPC call
-			Receipt:              nil, // TODO: not found in the RPC call
+			MaxFeePerGas:         tx.GasFeeCap(),
+			MaxPriorityFeePerGas: tx.GasTipCap(),
+			Hash:                 tx.Hash(),
+			From:                 from,
 		}
 	}
 
-	return &pb.Block{
-		Hash:              []byte(hash),
-		Number:            block.NumberU64(),
-		Header:            header,
-		Uncles:            nil, // TODO: I don't think we need this field
-		TransactionTraces: txns,
-		BalanceChanges:    nil, // TODO: I don't think we need this field
-		Logs:              nil, // This field will be fill later
-		TraceCalls:        nil, // TODO: I don't think we need this field
-		CodeChanges:       nil, // TODO: I don't think we need this field
-		Ver:               0,   // TODO: I don't think we need this field
-		Size:              0,   // TODO: I don't think we need this field
+	return types.Block{
+		Number:       block.Number(),
+		Hash:         hash,
+		Timestamp:    header.Timestamp,
+		ParentHash:   header.ParentHash,
+		Transactions: txns,
+		Header:       header,
+		ReorgedHash:  "",  // This field will be fill later
+		Logs:         nil, // This field will be fill later
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/KyberNetwork/evmlistener/internal/publisher"
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/listener"
@@ -95,21 +96,37 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	blockExpiration := c.Duration(blockExpirationFlag.Name)
 	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxNumBlocks, blockExpiration)
 
+	var publishSvc publisher.PublishService
+	var publishClient publisher.Client
 	topic := c.String(publisherTopicFlag.Name)
-	var publisher pubsub.Publisher
 
-	// pubsub message queue publisher
-	orderingKey := c.String(pubsubOrderingKeyFlag.Name)
-	projectID := c.String(pubsubProjectIDFlag.Name)
-	publisher, err = pubsub.NewPublisher(c.Context, projectID, orderingKey)
-	if err != nil {
-		return nil, err
+	publisherType := c.String(publisherTypeFlag.Name)
+	switch publisherType {
+	case "pubsub":
+		// pubsub message queue publisher
+		orderingKey := c.String(pubsubOrderingKeyFlag.Name)
+		projectID := c.String(pubsubProjectIDFlag.Name)
+
+		publishClient, err = pubsub.NewPubsub(c.Context, projectID)
+		if err != nil {
+			return nil, err
+		}
+
+		publishSvc = publisher.NewPubsubPublisher(publishClient, publisher.Config{
+			Topic:       topic,
+			OrderingKey: orderingKey,
+		})
+
+	default:
+		maxLen := c.Int64(publisherMaxLenFlag.Name)
+		publishClient = redis.NewStream(redisClient, maxLen)
+
+		publishSvc = publisher.NewPubsubPublisher(publishClient, publisher.Config{
+			Topic: topic,
+		})
 	}
 
-	// maxLen := c.Int64(publisherMaxLenFlag.Name)
-	// publisher = redis.NewStream(redisClient, maxLen)
-
-	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher)
+	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publishSvc)
 
 	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval), nil
 }

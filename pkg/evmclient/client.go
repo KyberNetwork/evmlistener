@@ -8,7 +8,6 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient/ftmclient"
 	zksyncclient "github.com/KyberNetwork/evmlistener/pkg/evmclient/zksync-client"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 	avaxtypes "github.com/ava-labs/coreth/core/types"
 	avaxclient "github.com/ava-labs/coreth/ethclient"
 	"github.com/ava-labs/coreth/interfaces"
@@ -50,7 +49,7 @@ type IClient interface {
 	FilterLogs(context.Context, FilterQuery) ([]types.Log, error)
 	HeaderByHash(context.Context, string) (*types.Header, error)
 	HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
-	GetFullBlockByHash(context.Context, string) (*pb.Block, error)
+	GetFullBlockByHash(context.Context, string) (types.Block, error)
 }
 
 type Client struct {
@@ -295,39 +294,39 @@ func (c *Client) FilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, er
 	}
 }
 
-func (c *Client) GetFullBlockByHash(ctx context.Context, hash string) (*pb.Block, error) {
+func (c *Client) GetFullBlockByHash(ctx context.Context, hash string) (types.Block, error) {
 	switch c.chainID {
 	case chainIDFantom:
 		block, err := c.ftmClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
 		if err != nil {
-			return nil, err
+			return types.Block{}, err
 		}
 
-		return ethBlockToProto(hash, block), nil
+		return convertEthBlock(hash, block), nil
 
 	case chainIDAvalanche:
 		block, err := c.avaxClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
 		if err != nil {
-			return nil, err
+			return types.Block{}, err
 		}
 
-		return avaxBlockToProto(hash, block), nil
+		return convertAvaxBlock(hash, block), nil
 
 	case chainIDZKSync:
 		block, err := c.zksyncClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
 		if err != nil {
-			return nil, err
+			return types.Block{}, err
 		}
 
-		return ethBlockToProto(hash, block), nil
+		return convertEthBlock(hash, block), nil
 
 	default:
 		block, err := c.ethClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
 		if err != nil {
-			return nil, err
+			return types.Block{}, err
 		}
 
-		return ethBlockToProto(hash, block), nil
+		return convertEthBlock(hash, block), nil
 	}
 }
 
