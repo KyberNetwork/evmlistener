@@ -12,7 +12,6 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/common"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 )
@@ -35,11 +34,6 @@ type EVMClientMock struct {
 	logsMap    map[ethcommon.Hash][]ethtypes.Log
 	subHeadChs []chan<- *types.Header
 	subs       []*ClientSubscription
-}
-
-func (c *EVMClientMock) GetFullBlockByHash(ctx context.Context, s string) (*pb.Block, error) {
-	// TODO implement me
-	panic("implement me")
 }
 
 func NewEVMClientMock(dataFile string) (*EVMClientMock, error) {
@@ -130,6 +124,18 @@ func (c *EVMClientMock) SubscribeNewHead(ctx context.Context, ch chan<- *types.H
 	c.subs = append(c.subs, sub)
 
 	return sub, nil
+}
+
+func (c *EVMClientMock) GetFullBlockByHash(ctx context.Context, hash string) (types.Block, error) {
+	header, _ := c.HeaderByHash(ctx, hash)
+
+	return types.Block{
+		Number:     header.Number,
+		Hash:       header.Hash,
+		Timestamp:  header.Timestamp,
+		ParentHash: header.ParentHash,
+		Header:     *header,
+	}, nil
 }
 
 // nolint
