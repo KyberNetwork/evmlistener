@@ -27,13 +27,8 @@ func NewStream(client *Client, maxLen int64) *Stream {
 }
 
 // Publish publishes a message to given topic.
-func (s *Stream) Publish(ctx context.Context, cfg publisher.Config, data []byte, extra map[string]string) error {
+func (s *Stream) Publish(ctx context.Context, cfg publisher.Config, data []byte, _ map[string]string) error {
 	values := []string{MessageKey, string(data)}
-	if len(extra) > 0 {
-		for k, v := range extra {
-			values = append(values, k, v)
-		}
-	}
 
 	return s.client.XAdd(ctx, &redis.XAddArgs{
 		Stream: cfg.Topic,

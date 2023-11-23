@@ -10,11 +10,11 @@ import (
 func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 	header := types.Header{
 		ParentHash:       block.ParentHash().Hex(),
-		UncleHash:        block.UncleHash(),
-		Coinbase:         block.Coinbase(),
-		StateRoot:        block.Root(),
-		TransactionsRoot: block.TxHash(),
-		ReceiptRoot:      block.ReceiptHash(),
+		UncleHash:        block.UncleHash().Hex(),
+		Coinbase:         block.Coinbase().Hex(),
+		StateRoot:        block.Root().Hex(),
+		TransactionsRoot: block.TxHash().Hex(),
+		ReceiptRoot:      block.ReceiptHash().Hex(),
 		LogsBloom:        block.Bloom().Bytes(),
 		Difficulty:       block.Difficulty(),
 		Number:           block.Number(),
@@ -22,7 +22,7 @@ func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 		GasUsed:          block.GasUsed(),
 		Timestamp:        block.Time(),
 		ExtraData:        block.Extra(),
-		MixHash:          block.MixDigest(),
+		MixHash:          block.MixDigest().Hex(),
 		Nonce:            block.Nonce(),
 		Hash:             hash,
 		BaseFeePerGas:    block.BaseFee(),
@@ -40,7 +40,7 @@ func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 			}
 
 			accessList[j] = &types.AccessTuple{
-				Address:     a.Address,
+				Address:     a.Address.Hex(),
 				StorageKeys: storageKeys,
 			}
 		}
@@ -60,7 +60,7 @@ func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 		}
 
 		txns[i] = types.Txn{
-			To:                   *tx.To(),
+			To:                   tx.To().Hex(),
 			Nonce:                tx.Nonce(),
 			GasPrice:             tx.GasPrice(),
 			GasLimit:             tx.Gas(),
@@ -73,8 +73,8 @@ func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 			AccessList:           accessList,
 			MaxFeePerGas:         tx.GasFeeCap(),
 			MaxPriorityFeePerGas: tx.GasTipCap(),
-			Hash:                 tx.Hash(),
-			From:                 from,
+			Hash:                 tx.Hash().Hex(),
+			From:                 from.Hex(),
 		}
 	}
 
@@ -94,11 +94,11 @@ func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
 	header := types.Header{
 		ParentHash:       block.ParentHash().Hex(),
-		UncleHash:        block.UncleHash(),
-		Coinbase:         block.Coinbase(),
-		StateRoot:        block.Root(),
-		TransactionsRoot: block.TxHash(),
-		ReceiptRoot:      block.ReceiptHash(),
+		UncleHash:        block.UncleHash().Hex(),
+		Coinbase:         block.Coinbase().Hex(),
+		StateRoot:        block.Root().Hex(),
+		TransactionsRoot: block.TxHash().Hex(),
+		ReceiptRoot:      block.ReceiptHash().Hex(),
 		LogsBloom:        block.Bloom().Bytes(),
 		Difficulty:       block.Difficulty(),
 		Number:           block.Number(),
@@ -106,7 +106,7 @@ func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
 		GasUsed:          block.GasUsed(),
 		Timestamp:        block.Time(),
 		ExtraData:        block.Extra(),
-		MixHash:          block.MixDigest(),
+		MixHash:          block.MixDigest().Hex(),
 		Nonce:            block.Nonce(),
 		Hash:             hash,
 		BaseFeePerGas:    block.BaseFee(),
@@ -124,7 +124,7 @@ func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
 			}
 
 			accessList[j] = &types.AccessTuple{
-				Address:     a.Address,
+				Address:     a.Address.Hex(),
 				StorageKeys: storageKeys,
 			}
 		}
@@ -144,7 +144,7 @@ func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
 		}
 
 		txns[i] = types.Txn{
-			To:                   *tx.To(),
+			To:                   tx.To().Hex(),
 			Nonce:                tx.Nonce(),
 			GasPrice:             tx.GasPrice(),
 			GasLimit:             tx.Gas(),
@@ -157,8 +157,8 @@ func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
 			AccessList:           accessList,
 			MaxFeePerGas:         tx.GasFeeCap(),
 			MaxPriorityFeePerGas: tx.GasTipCap(),
-			Hash:                 tx.Hash(),
-			From:                 from,
+			Hash:                 tx.Hash().Hex(),
+			From:                 from.Hex(),
 		}
 	}
 

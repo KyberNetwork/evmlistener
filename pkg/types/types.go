@@ -4,29 +4,28 @@ import (
 	"math/big"
 
 	"github.com/KyberNetwork/evmlistener/protobuf/pb"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 // Header contains block header information.
 type Header struct {
-	Hash             string         `json:"hash"`
-	ParentHash       string         `json:"parentHash"`
-	Number           *big.Int       `json:"number"`
-	Time             uint64         `json:"timestamp"`
-	UncleHash        common.Hash    `json:"-"`
-	Coinbase         common.Address `json:"-"`
-	StateRoot        common.Hash    `json:"-"`
-	TransactionsRoot common.Hash    `json:"-"`
-	ReceiptRoot      common.Hash    `json:"-"`
-	LogsBloom        []byte         `json:"-"`
-	Difficulty       *big.Int       `json:"-"`
-	GasLimit         uint64         `json:"-"`
-	GasUsed          uint64         `json:"-"`
-	Timestamp        uint64         `json:"-"`
-	ExtraData        []byte         `json:"-"`
-	MixHash          common.Hash    `json:"-"`
-	Nonce            uint64         `json:"-"`
-	BaseFeePerGas    *big.Int       `json:"-"`
+	Hash             string   `json:"hash"`
+	ParentHash       string   `json:"parentHash"`
+	Number           *big.Int `json:"number"`
+	Time             uint64   `json:"timestamp"`
+	UncleHash        string   `json:"-"`
+	Coinbase         string   `json:"-"`
+	StateRoot        string   `json:"-"`
+	TransactionsRoot string   `json:"-"`
+	ReceiptRoot      string   `json:"-"`
+	LogsBloom        []byte   `json:"-"`
+	Difficulty       *big.Int `json:"-"`
+	GasLimit         uint64   `json:"-"`
+	GasUsed          uint64   `json:"-"`
+	Timestamp        uint64   `json:"-"`
+	ExtraData        []byte   `json:"-"`
+	MixHash          string   `json:"-"`
+	Nonce            uint64   `json:"-"`
+	BaseFeePerGas    *big.Int `json:"-"`
 }
 
 func (h *Header) ToProtobuf(blockHash string) *pb.BlockHeader {
@@ -36,11 +35,11 @@ func (h *Header) ToProtobuf(blockHash string) *pb.BlockHeader {
 
 	return &pb.BlockHeader{
 		ParentHash:       []byte(h.ParentHash),
-		UncleHash:        h.UncleHash.Bytes(),
-		Coinbase:         h.Coinbase.Bytes(),
-		StateRoot:        h.StateRoot.Bytes(),
-		TransactionsRoot: h.TransactionsRoot.Bytes(),
-		ReceiptRoot:      h.ReceiptRoot.Bytes(),
+		UncleHash:        []byte(h.UncleHash),
+		Coinbase:         []byte(h.Coinbase),
+		StateRoot:        []byte(h.StateRoot),
+		TransactionsRoot: []byte(h.TransactionsRoot),
+		ReceiptRoot:      []byte(h.ReceiptRoot),
 		LogsBloom:        h.LogsBloom,
 		Difficulty:       &pb.BigInt{Bytes: h.Difficulty.Bytes()},
 		Number:           h.Number.Uint64(),
@@ -48,7 +47,7 @@ func (h *Header) ToProtobuf(blockHash string) *pb.BlockHeader {
 		GasUsed:          h.GasUsed,
 		Timestamp:        h.Timestamp,
 		ExtraData:        h.ExtraData,
-		MixHash:          h.MixHash.Bytes(),
+		MixHash:          []byte(h.MixHash),
 		Nonce:            h.Nonce,
 		Hash:             []byte(blockHash),
 		BaseFeePerGas:    &pb.BigInt{Bytes: h.BaseFeePerGas.Bytes()},
@@ -57,7 +56,7 @@ func (h *Header) ToProtobuf(blockHash string) *pb.BlockHeader {
 }
 
 type Txn struct {
-	To                   common.Address `json:"-"`
+	To                   string         `json:"-"`
 	Nonce                uint64         `json:"-"`
 	GasPrice             *big.Int       `json:"-"`
 	GasLimit             uint64         `json:"-"`
@@ -70,13 +69,13 @@ type Txn struct {
 	AccessList           []*AccessTuple `json:"-"`
 	MaxFeePerGas         *big.Int       `json:"-"`
 	MaxPriorityFeePerGas *big.Int       `json:"-"`
-	Hash                 common.Hash    `json:"-"`
-	From                 common.Address `json:"-"`
+	Hash                 string         `json:"-"`
+	From                 string         `json:"-"`
 }
 
 type AccessTuple struct {
-	Address     common.Address `json:"-"`
-	StorageKeys [][]byte       `json:"-"`
+	Address     string   `json:"-"`
+	StorageKeys [][]byte `json:"-"`
 }
 
 func (tx *Txn) ToProtobuf() *pb.TransactionTrace {
@@ -86,12 +85,12 @@ func (tx *Txn) ToProtobuf() *pb.TransactionTrace {
 
 	accessList := make([]*pb.AccessTuple, len(tx.AccessList))
 	for i, a := range tx.AccessList {
-		accessList[i].Address = a.Address.Bytes()
+		accessList[i].Address = []byte(a.Address)
 		accessList[i].StorageKeys = a.StorageKeys
 	}
 
 	return &pb.TransactionTrace{
-		To:                   tx.To.Bytes(),
+		To:                   []byte(tx.To),
 		Nonce:                tx.Nonce,
 		GasPrice:             &pb.BigInt{Bytes: tx.GasPrice.Bytes()},
 		GasLimit:             tx.GasLimit,
@@ -104,8 +103,8 @@ func (tx *Txn) ToProtobuf() *pb.TransactionTrace {
 		AccessList:           accessList,
 		MaxFeePerGas:         &pb.BigInt{Bytes: tx.MaxFeePerGas.Bytes()},
 		MaxPriorityFeePerGas: &pb.BigInt{Bytes: tx.MaxPriorityFeePerGas.Bytes()},
-		Hash:                 tx.Hash.Bytes(),
-		From:                 tx.From.Bytes(),
+		Hash:                 []byte(tx.Hash),
+		From:                 []byte(tx.From),
 		TransactionIndex:     nil, // TODO: not found in the RPC call
 		GasUsed:              0,   // TODO: not found in the RPC call
 		Receipt:              nil, // TODO: not found in the RPC call

@@ -22,7 +22,7 @@ type Log struct {
 }
 
 // MarshalJSON marshals as JSON.
-func (l *Log) MarshalJSON() ([]byte, error) {
+func (l Log) MarshalJSON() ([]byte, error) {
 	type Log struct {
 		Address     string         `json:"address"`
 		Topics      []string       `json:"topics"`

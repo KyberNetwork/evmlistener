@@ -96,7 +96,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	blockExpiration := c.Duration(blockExpirationFlag.Name)
 	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxNumBlocks, blockExpiration)
 
-	var publishSvc publisher.PublishService
+	var publishSvc publisher.Publisher
 	var publishClient publisher.Client
 	topic := c.String(publisherTopicFlag.Name)
 
@@ -112,7 +112,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 			return nil, err
 		}
 
-		publishSvc = publisher.NewPubsubPublisher(publishClient, publisher.Config{
+		publishSvc = publisher.NewDataCentralPublisher(publishClient, publisher.Config{
 			Topic:       topic,
 			OrderingKey: orderingKey,
 		})
@@ -121,7 +121,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		maxLen := c.Int64(publisherMaxLenFlag.Name)
 		publishClient = redis.NewStream(redisClient, maxLen)
 
-		publishSvc = publisher.NewPubsubPublisher(publishClient, publisher.Config{
+		publishSvc = publisher.NewDataCentralPublisher(publishClient, publisher.Config{
 			Topic: topic,
 		})
 	}

@@ -17,14 +17,14 @@ type Handler struct {
 
 	evmClient   evmclient.IClient
 	blockKeeper block.Keeper
-	publishSvc  publisher.PublishService
+	publishSvc  publisher.Publisher
 	l           *zap.SugaredLogger
 }
 
 // NewHandler ...
 func NewHandler(
 	l *zap.SugaredLogger, topic string, evmClient evmclient.IClient,
-	blockKeeper block.Keeper, publishSvc publisher.PublishService,
+	blockKeeper block.Keeper, publishSvc publisher.Publisher,
 ) *Handler {
 	return &Handler{
 		topic:       topic,

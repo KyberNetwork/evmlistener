@@ -10,6 +10,6 @@ type Client interface {
 	Publish(ctx context.Context, cfg Config, data []byte, extra map[string]string) error
 }
 
-type PublishService interface {
+type Publisher interface {
 	Publish(ctx context.Context, msg types.Message) error
 }
