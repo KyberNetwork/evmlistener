@@ -5,18 +5,19 @@ import (
 	"strconv"
 
 	"github.com/KyberNetwork/evmlistener/pkg/common"
+	"github.com/KyberNetwork/evmlistener/pkg/pubsub"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )
 
 type DataCentralPublisher struct {
-	client Client
+	client *pubsub.Client
 	config Config
 	logger *zap.SugaredLogger
 }
 
-func NewDataCentralPublisher(client Client, cfg Config) *DataCentralPublisher {
+func NewDataCentralPublisher(client *pubsub.Client, cfg Config) *DataCentralPublisher {
 	l := zap.S()
 	l.With("orderingKey", cfg.OrderingKey)
 
@@ -42,7 +43,7 @@ func (p *DataCentralPublisher) Publish(ctx context.Context, msg types.Message) e
 		}
 		extra := p.extractExtraData(b)
 
-		err = p.client.Publish(ctx, p.config, data, extra)
+		err = p.client.Publish(ctx, p.config.Topic, p.config.OrderingKey, data, extra)
 		if err != nil {
 			p.logger.Errorf("error publish block %d to pubsub: %v", b.Number.Uint64(), err)
 

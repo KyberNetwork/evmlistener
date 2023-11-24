@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/KyberNetwork/evmlistener/internal/publisher"
 	"go.uber.org/zap"
 )
 
@@ -30,21 +29,21 @@ func NewPubsub(ctx context.Context, projectID string) (*Client, error) {
 	}, nil
 }
 
-func (p *Client) Publish(ctx context.Context, cfg publisher.Config, data []byte, extra map[string]string) error {
-	t := p.client.Topic(cfg.Topic)
+func (p *Client) Publish(ctx context.Context, topic, orderingKey string, data []byte, extra map[string]string) error {
+	t := p.client.Topic(topic)
 	t.EnableMessageOrdering = true
 	defer t.Stop()
 
-	p.logger.Infof("publishing message to topic %s", cfg.Topic)
+	p.logger.Infof("publishing message to topic %s", topic)
 	result := t.Publish(ctx, &pubsub.Message{
 		Data:        data,
 		Attributes:  extra,
-		OrderingKey: cfg.OrderingKey,
+		OrderingKey: orderingKey,
 	})
 
 	id, err := result.Get(ctx)
 	if err != nil {
-		p.logger.Errorf("error publishing message id %s to topic %s: %v", id, cfg.Topic, err)
+		p.logger.Errorf("error publishing message id %s to topic %s: %v", id, topic, err)
 	}
 
 	return err

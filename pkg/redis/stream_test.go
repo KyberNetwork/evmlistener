@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/KyberNetwork/evmlistener/internal/publisher"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -58,7 +57,7 @@ func (ts *StreamTestSuite) TestPublish() {
 		data, err := json.Marshal(test.msg)
 		ts.Require().NoError(err)
 
-		err = ts.s.Publish(context.Background(), publisher.Config{Topic: topic}, data, nil)
+		err = ts.s.Publish(context.Background(), topic, data)
 		ts.Require().NoError(err)
 
 		res, err := ts.s.client.XRevRangeN(context.Background(), topic, "+", "-", 1).Result()

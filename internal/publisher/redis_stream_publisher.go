@@ -4,17 +4,18 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/KyberNetwork/evmlistener/pkg/redis"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"go.uber.org/zap"
 )
 
 type RedisStreamPublisher struct {
-	client Client
+	client *redis.Stream
 	config Config
 	logger *zap.SugaredLogger
 }
 
-func NewRedisStreamPublisher(client Client, cfg Config) *RedisStreamPublisher {
+func NewRedisStreamPublisher(client *redis.Stream, cfg Config) *RedisStreamPublisher {
 	return &RedisStreamPublisher{
 		client: client,
 		config: cfg,
@@ -34,7 +35,7 @@ func (p *RedisStreamPublisher) Publish(ctx context.Context, msg types.Message) e
 		return err
 	}
 
-	err = p.client.Publish(ctx, p.config, data, nil)
+	err = p.client.Publish(ctx, p.config.Topic, data)
 	if err != nil {
 		p.logger.Errorf("error publish to redis stream: %v", err)
 

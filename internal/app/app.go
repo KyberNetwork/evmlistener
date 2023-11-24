@@ -97,7 +97,6 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxNumBlocks, blockExpiration)
 
 	var publishSvc publisher.Publisher
-	var publishClient publisher.Client
 	topic := c.String(publisherTopicFlag.Name)
 
 	publisherType := c.String(publisherTypeFlag.Name)
@@ -107,21 +106,21 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		orderingKey := c.String(pubsubOrderingKeyFlag.Name)
 		projectID := c.String(pubsubProjectIDFlag.Name)
 
-		publishClient, err = pubsub.NewPubsub(c.Context, projectID)
+		pubsubCli, err := pubsub.NewPubsub(c.Context, projectID)
 		if err != nil {
 			return nil, err
 		}
 
-		publishSvc = publisher.NewDataCentralPublisher(publishClient, publisher.Config{
+		publishSvc = publisher.NewDataCentralPublisher(pubsubCli, publisher.Config{
 			Topic:       topic,
 			OrderingKey: orderingKey,
 		})
 
 	default:
 		maxLen := c.Int64(publisherMaxLenFlag.Name)
-		publishClient = redis.NewStream(redisClient, maxLen)
+		streamCli := redis.NewStream(redisClient, maxLen)
 
-		publishSvc = publisher.NewDataCentralPublisher(publishClient, publisher.Config{
+		publishSvc = publisher.NewRedisStreamPublisher(streamCli, publisher.Config{
 			Topic: topic,
 		})
 	}
