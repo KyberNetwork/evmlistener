@@ -49,6 +49,8 @@ func (p *DataCentralPublisher) Publish(ctx context.Context, msg types.Message) e
 
 			return err
 		}
+
+		p.logger.Debugf("Done publish block %d to msg queue", b.Number.Uint64())
 	}
 
 	return nil

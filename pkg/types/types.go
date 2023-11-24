@@ -71,6 +71,7 @@ type Txn struct {
 	MaxPriorityFeePerGas *big.Int       `json:"-"`
 	Hash                 string         `json:"-"`
 	From                 string         `json:"-"`
+	TransactionIndex     uint64         `json:"-"`
 }
 
 type AccessTuple struct {
@@ -105,7 +106,7 @@ func (tx *Txn) ToProtobuf() *pb.TransactionTrace {
 		MaxPriorityFeePerGas: &pb.BigInt{Bytes: tx.MaxPriorityFeePerGas.Bytes()},
 		Hash:                 []byte(tx.Hash),
 		From:                 []byte(tx.From),
-		TransactionIndex:     nil, // TODO: not found in the RPC call
+		TransactionIndex:     &tx.TransactionIndex,
 		GasUsed:              0,   // TODO: not found in the RPC call
 		Receipt:              nil, // TODO: not found in the RPC call
 	}

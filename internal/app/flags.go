@@ -3,6 +3,7 @@ package app
 import (
 	"time"
 
+	"github.com/KyberNetwork/evmlistener/internal/publisher"
 	"github.com/urfave/cli/v2"
 )
 
@@ -127,11 +128,10 @@ var (
 		Usage:    "Project id of pubsub to publish message to (required for pubsub)",
 	}
 	publisherTypeFlag = &cli.StringFlag{
-		Name:     "publisher-type",
-		EnvVars:  []string{"PUBLISHER_TYPE"},
-		Value:    "redis-stream",
-		Required: false,
-		Usage:    "The type of the message publisher (Required)",
+		Name:    "publisher-type",
+		EnvVars: []string{"PUBLISHER_TYPE"},
+		Value:   publisher.RedisStream.String(),
+		Usage:   "The type of the message publisher (Required)",
 	}
 
 	maxNumBlocksFlag = &cli.IntFlag{

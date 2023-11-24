@@ -101,7 +101,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 
 	publisherType := c.String(publisherTypeFlag.Name)
 	switch publisherType {
-	case "pubsub":
+	case publisher.DataCentral.String():
 		// pubsub message queue publisher
 		orderingKey := c.String(pubsubOrderingKeyFlag.Name)
 		projectID := c.String(pubsubProjectIDFlag.Name)

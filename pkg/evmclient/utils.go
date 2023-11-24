@@ -75,6 +75,7 @@ func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 			MaxPriorityFeePerGas: tx.GasTipCap(),
 			Hash:                 tx.Hash().Hex(),
 			From:                 from.Hex(),
+			TransactionIndex:     uint64(i),
 		}
 	}
 
@@ -159,6 +160,7 @@ func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
 			MaxPriorityFeePerGas: tx.GasTipCap(),
 			Hash:                 tx.Hash().Hex(),
 			From:                 from.Hex(),
+			TransactionIndex:     uint64(i),
 		}
 	}
 
