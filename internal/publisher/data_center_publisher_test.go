@@ -20,7 +20,7 @@ import (
 )
 
 // nolint
-func TestDataCentralPublisher_Publish(t *testing.T) {
+func TestDataCenterPublisher_Publish(t *testing.T) {
 	ctx := context.TODO()
 	c, srv, topic, sub := initFakePubsub(t, ctx)
 	defer topic.Stop()
@@ -35,7 +35,7 @@ func TestDataCentralPublisher_Publish(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	publisher := NewDataCentralPublisher(client, Config{
+	publisher := NewDataCenterPublisher(client, Config{
 		Topic:       topic.ID(),
 		OrderingKey: "k",
 	})

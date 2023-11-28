@@ -8,7 +8,7 @@ type Config struct {
 type Type string
 
 const (
-	DataCentral Type = "data-central"
+	DataCenter  Type = "data-center"
 	RedisStream Type = "redis-stream"
 )
 

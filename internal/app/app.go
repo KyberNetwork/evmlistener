@@ -101,7 +101,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 
 	publisherType := c.String(publisherTypeFlag.Name)
 	switch publisherType {
-	case publisher.DataCentral.String():
+	case publisher.DataCenter.String():
 		// pubsub message queue publisher
 		orderingKey := c.String(pubsubOrderingKeyFlag.Name)
 		projectID := c.String(pubsubProjectIDFlag.Name)
@@ -111,7 +111,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 			return nil, err
 		}
 
-		publishSvc = publisher.NewDataCentralPublisher(pubsubCli, publisher.Config{
+		publishSvc = publisher.NewDataCenterPublisher(pubsubCli, publisher.Config{
 			Topic:       topic,
 			OrderingKey: orderingKey,
 		})

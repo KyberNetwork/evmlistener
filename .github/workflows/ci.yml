@@ -11,6 +11,7 @@ on:
       - main
       - release
       - ci
+      - main-datacenter
   pull_request:
     branches:
       - "*"

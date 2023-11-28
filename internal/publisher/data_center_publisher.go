@@ -11,24 +11,24 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type DataCentralPublisher struct {
+type DataCenterPublisher struct {
 	client *pubsub.Client
 	config Config
 	logger *zap.SugaredLogger
 }
 
-func NewDataCentralPublisher(client *pubsub.Client, cfg Config) *DataCentralPublisher {
+func NewDataCenterPublisher(client *pubsub.Client, cfg Config) *DataCenterPublisher {
 	l := zap.S()
 	l.With("orderingKey", cfg.OrderingKey)
 
-	return &DataCentralPublisher{
+	return &DataCenterPublisher{
 		client: client,
 		config: cfg,
 		logger: l,
 	}
 }
 
-func (p *DataCentralPublisher) Publish(ctx context.Context, msg types.Message) error {
+func (p *DataCenterPublisher) Publish(ctx context.Context, msg types.Message) error {
 	p.logger.Infow("Publish message to queue",
 		"topic", p.config.Topic,
 		"numRevertedBlocks", len(msg.RevertedBlocks),
@@ -59,7 +59,7 @@ func (p *DataCentralPublisher) Publish(ctx context.Context, msg types.Message) e
 	return nil
 }
 
-func (p *DataCentralPublisher) extractExtraData(block types.Block) map[string]string {
+func (p *DataCenterPublisher) extractExtraData(block types.Block) map[string]string {
 	return map[string]string{
 		"block_number":    block.Header.Number.String(),
 		"block_hash":      block.Hash,
@@ -68,7 +68,7 @@ func (p *DataCentralPublisher) extractExtraData(block types.Block) map[string]st
 	}
 }
 
-func (p *DataCentralPublisher) packMsgData(b types.Block) ([]byte, error) {
+func (p *DataCenterPublisher) packMsgData(b types.Block) ([]byte, error) {
 	block := b.ToProtobuf()
 	bytesData, err := proto.Marshal(block)
 	if err != nil {
