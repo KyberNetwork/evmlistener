@@ -8,12 +8,10 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
-      - release
-      - ci
+      - main-datacenter
   pull_request:
     branches:
-      - "*"
+      - "datacenter/*"
 
 env:
   SERVICE: evmlistener
@@ -24,7 +22,7 @@ jobs:
     outputs:
       current_branch: ${{ steps.current_branch.outputs.value }}
       head_sha: ${{ steps.head_sha.outputs.value }}
-      image_name: "asia.gcr.io/kyber-operation/core/${{ env.SERVICE }}"
+      image_name: "asia.gcr.io/kyber-operation/foundation/datahub/${{ env.SERVICE }}"
       image_tag: ${{ steps.get_tag.outputs.image_tag }}
       branch_tag: ${{ steps.get_tag.outputs.branch_tag }}
     steps:
@@ -68,50 +66,10 @@ jobs:
           echo "::set-output name=image_tag::$branch_tag-$short_sha"
           echo "::set-output name=branch_tag::$branch_tag-$short_sha"
 
-  lint:
-    name: Run golangci-lint
-    runs-on: [ubuntu-22.04]
-    needs:
-      - prepare
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: "1.21.x"
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.53.3
-          args: --config=.golangci.yml
-          skip-pkg-cache: true
-          skip-build-cache: true
-
-  test:
-    runs-on: [ubuntu-22.04]
-    needs:
-      - prepare
-    services:
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Install Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: "1.21.x"
-      - name: Run test
-        run: go test -race -v ./...
-
   build:
     if:
       contains('
-        refs/heads/main
-        refs/heads/release
+        refs/heads/main-datacenter
       ', github.ref)
     runs-on: [ubuntu-22.04]
     needs:
