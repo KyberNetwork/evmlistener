@@ -23,9 +23,6 @@ import (
 func TestDataCenterPublisher_Publish(t *testing.T) {
 	ctx := context.TODO()
 	c, srv, topic, sub := initFakePubsub(t, ctx)
-	defer topic.Stop()
-	defer c.Close()
-	defer srv.Close()
 
 	client, err := evmPubsub.InitPubsub(ctx, c.Project(),
 		option.WithEndpoint(srv.Addr),
@@ -108,6 +105,11 @@ func TestDataCenterPublisher_Publish(t *testing.T) {
 		case <-childCtx.Done():
 			t.Log("Done context")
 			done()
+			topic.Stop()
+			err = c.Close()
+			assert.NoError(t, err)
+			err = srv.Close()
+			assert.NoError(t, err)
 
 			return
 		}
@@ -118,7 +120,7 @@ func getBlockFromSub(t *testing.T, ctx context.Context, sub *pubsub.Subscription
 	t.Helper()
 	sub.ReceiveSettings.NumGoroutines = 1
 
-	err := sub.Receive(ctx, func(ctx context.Context, message *pubsub.Message) {
+	_ = sub.Receive(ctx, func(ctx context.Context, message *pubsub.Message) {
 		assert.Len(t, message.Attributes, 4, "must contain extra info")
 		_, ok := message.Attributes["block_number"]
 		assert.True(t, ok)
@@ -133,10 +135,9 @@ func getBlockFromSub(t *testing.T, ctx context.Context, sub *pubsub.Subscription
 		assert.NoError(t, err)
 
 		sender <- &block
+		message.Ack()
 		t.Logf("got block %d", block.Number)
 	})
-
-	assert.NoError(t, err)
 }
 
 func initFakePubsub(t *testing.T, ctx context.Context) (
