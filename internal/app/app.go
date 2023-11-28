@@ -106,7 +106,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		orderingKey := c.String(pubsubOrderingKeyFlag.Name)
 		projectID := c.String(pubsubProjectIDFlag.Name)
 
-		pubsubCli, err := pubsub.InitPubsub(c.Context, projectID)
+		pubsubCli, err := pubsub.InitPubsub(c.Context, projectID, topic)
 		if err != nil {
 			return nil, err
 		}

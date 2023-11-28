@@ -24,7 +24,7 @@ func TestDataCenterPublisher_Publish(t *testing.T) {
 	ctx := context.TODO()
 	c, srv, topic, sub := initFakePubsub(t, ctx)
 
-	client, err := evmPubsub.InitPubsub(ctx, c.Project(),
+	client, err := evmPubsub.InitPubsub(ctx, c.Project(), topic.ID(),
 		option.WithEndpoint(srv.Addr),
 		option.WithoutAuthentication(),
 		option.WithGRPCDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
@@ -87,7 +87,7 @@ func TestDataCenterPublisher_Publish(t *testing.T) {
 	go getBlockFromSub(t, childCtx, sub, sender)
 
 	var blocks []*pb.Block
-	counter := 3
+	counter := 2
 	for {
 		select {
 		case b := <-sender:
@@ -118,7 +118,6 @@ func TestDataCenterPublisher_Publish(t *testing.T) {
 
 func getBlockFromSub(t *testing.T, ctx context.Context, sub *pubsub.Subscription, sender chan<- *pb.Block) {
 	t.Helper()
-	sub.ReceiveSettings.NumGoroutines = 1
 
 	_ = sub.Receive(ctx, func(ctx context.Context, message *pubsub.Message) {
 		assert.Len(t, message.Attributes, 4, "must contain extra info")
@@ -161,7 +160,8 @@ func initFakePubsub(t *testing.T, ctx context.Context) (
 	topic.EnableMessageOrdering = true
 
 	sub, err := c.CreateSubscription(ctx, "s", pubsub.SubscriptionConfig{
-		Topic: topic,
+		Topic:                 topic,
+		EnableMessageOrdering: true,
 	})
 	if err != nil {
 		t.Fatal(err)

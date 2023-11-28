@@ -37,6 +37,7 @@ func (p *DataCenterPublisher) Publish(ctx context.Context, msg types.Message) er
 	if len(msg.RevertedBlocks) > 0 {
 		p.logger.Warnf("%d of blocks is re-orged", len(msg.RevertedBlocks))
 	}
+
 	for _, b := range msg.NewBlocks {
 		data, err := p.packMsgData(b)
 		if err != nil {
@@ -46,7 +47,7 @@ func (p *DataCenterPublisher) Publish(ctx context.Context, msg types.Message) er
 		}
 		extra := p.extractExtraData(b)
 
-		msgID, err := p.client.Publish(ctx, p.config.Topic, p.config.OrderingKey, data, extra)
+		msgID, err := p.client.Publish(ctx, p.config.OrderingKey, data, extra)
 		if err != nil {
 			p.logger.Errorf("error publish block %d to pubsub: %v", b.Header.Number.Uint64(), err)
 

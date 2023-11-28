@@ -10,10 +10,11 @@ import (
 
 type Client struct {
 	client *pubsub.Client
+	topic  *pubsub.Topic
 	logger *zap.SugaredLogger
 }
 
-func InitPubsub(ctx context.Context, projectID string, opts ...option.ClientOption) (*Client, error) {
+func InitPubsub(ctx context.Context, projectID, topicID string, opts ...option.ClientOption) (*Client, error) {
 	l := zap.S()
 	l.With("project id", projectID)
 
@@ -24,21 +25,21 @@ func InitPubsub(ctx context.Context, projectID string, opts ...option.ClientOpti
 		return nil, err
 	}
 
+	t := client.Topic(topicID)
+	t.EnableMessageOrdering = true
+
 	return &Client{
 		client: client,
+		topic:  t,
 		logger: l,
 	}, nil
 }
 
-func (p *Client) Publish(ctx context.Context, topic, orderingKey string, data []byte, extra map[string]string) (
-	string, error,
-) {
-	t := p.client.Topic(topic)
-	t.EnableMessageOrdering = true
-	defer t.Stop()
-
-	p.logger.Infof("publishing message to topic %s", topic)
-	result := t.Publish(ctx, &pubsub.Message{
+func (p *Client) Publish(ctx context.Context, orderingKey string,
+	data []byte, extra map[string]string,
+) (string, error) {
+	p.logger.Infof("publishing message to topic %s", p.topic.ID())
+	result := p.topic.Publish(ctx, &pubsub.Message{
 		Data:        data,
 		Attributes:  extra,
 		OrderingKey: orderingKey,
@@ -46,8 +47,15 @@ func (p *Client) Publish(ctx context.Context, topic, orderingKey string, data []
 
 	id, err := result.Get(ctx)
 	if err != nil {
-		p.logger.Errorf("error publishing message id %s to topic %s: %v", id, topic, err)
+		p.logger.Errorf("error publishing message id %s to topic %s: %v", id, p.topic.ID(), err)
 	}
 
 	return id, err
+}
+
+func (p *Client) initTopic(topicID string) *pubsub.Topic {
+	t := p.client.Topic(topicID)
+	t.EnableMessageOrdering = true
+
+	return t
 }
