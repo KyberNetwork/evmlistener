@@ -33,6 +33,15 @@ func (h *Header) ToProtobuf(blockHash string) *pb.BlockHeader {
 		return nil
 	}
 
+	difficulty := &pb.BigInt{Bytes: big.NewInt(0).Bytes()}
+	if h.Difficulty != nil {
+		difficulty = &pb.BigInt{Bytes: h.Difficulty.Bytes()}
+	}
+	baseFeePerGas := &pb.BigInt{Bytes: big.NewInt(0).Bytes()}
+	if h.BaseFeePerGas != nil {
+		baseFeePerGas = &pb.BigInt{Bytes: h.BaseFeePerGas.Bytes()}
+	}
+
 	return &pb.BlockHeader{
 		ParentHash:       []byte(h.ParentHash),
 		UncleHash:        []byte(h.UncleHash),
@@ -41,7 +50,7 @@ func (h *Header) ToProtobuf(blockHash string) *pb.BlockHeader {
 		TransactionsRoot: []byte(h.TransactionsRoot),
 		ReceiptRoot:      []byte(h.ReceiptRoot),
 		LogsBloom:        h.LogsBloom,
-		Difficulty:       &pb.BigInt{Bytes: h.Difficulty.Bytes()},
+		Difficulty:       difficulty,
 		Number:           h.Number.Uint64(),
 		GasLimit:         h.GasLimit,
 		GasUsed:          h.GasUsed,
@@ -50,7 +59,7 @@ func (h *Header) ToProtobuf(blockHash string) *pb.BlockHeader {
 		MixHash:          []byte(h.MixHash),
 		Nonce:            h.Nonce,
 		Hash:             []byte(blockHash),
-		BaseFeePerGas:    &pb.BigInt{Bytes: h.BaseFeePerGas.Bytes()},
+		BaseFeePerGas:    baseFeePerGas,
 		TotalDifficulty:  nil, // TODO: not found in the RPC call
 	}
 }
@@ -90,20 +99,37 @@ func (tx *Txn) ToProtobuf() *pb.TransactionTrace {
 		accessList[i].StorageKeys = a.StorageKeys
 	}
 
+	gasPrice := &pb.BigInt{Bytes: big.NewInt(0).Bytes()}
+	if tx.GasPrice != nil {
+		gasPrice = &pb.BigInt{Bytes: tx.GasPrice.Bytes()}
+	}
+	value := &pb.BigInt{Bytes: big.NewInt(0).Bytes()}
+	if tx.Value != nil {
+		value = &pb.BigInt{Bytes: tx.Value.Bytes()}
+	}
+	maxFeePerGas := &pb.BigInt{Bytes: big.NewInt(0).Bytes()}
+	if tx.MaxFeePerGas != nil {
+		maxFeePerGas = &pb.BigInt{Bytes: tx.MaxFeePerGas.Bytes()}
+	}
+	maxPriorityFeePerGas := &pb.BigInt{Bytes: big.NewInt(0).Bytes()}
+	if tx.MaxPriorityFeePerGas != nil {
+		maxPriorityFeePerGas = &pb.BigInt{Bytes: tx.MaxPriorityFeePerGas.Bytes()}
+	}
+
 	return &pb.TransactionTrace{
 		To:                   []byte(tx.To),
 		Nonce:                tx.Nonce,
-		GasPrice:             &pb.BigInt{Bytes: tx.GasPrice.Bytes()},
+		GasPrice:             gasPrice,
 		GasLimit:             tx.GasLimit,
-		Value:                &pb.BigInt{Bytes: tx.Value.Bytes()},
+		Value:                value,
 		Input:                tx.Input,
 		V:                    tx.V,
 		R:                    tx.R,
 		S:                    tx.S,
 		Type:                 pb.TransactionTrace_Type(tx.Type),
 		AccessList:           accessList,
-		MaxFeePerGas:         &pb.BigInt{Bytes: tx.MaxFeePerGas.Bytes()},
-		MaxPriorityFeePerGas: &pb.BigInt{Bytes: tx.MaxPriorityFeePerGas.Bytes()},
+		MaxFeePerGas:         maxFeePerGas,
+		MaxPriorityFeePerGas: maxPriorityFeePerGas,
 		Hash:                 []byte(tx.Hash),
 		From:                 []byte(tx.From),
 		TransactionIndex:     &tx.TransactionIndex,
@@ -122,6 +148,7 @@ type Block struct {
 	Logs         []Log    `json:"logs"`
 	Transactions []Txn    `json:"-"`
 	Header       Header   `json:"-"`
+	Size         uint64   `json:"_"`
 }
 
 // Message ...
@@ -153,11 +180,11 @@ func (b *Block) ToProtobuf() *pb.Block {
 		Header:            header,
 		TransactionTraces: txns,
 		Logs:              logs,
+		Size:              b.Size,
 		Uncles:            nil, // TODO: I don't think we need this field
 		BalanceChanges:    nil, // TODO: I don't think we need this field
 		TraceCalls:        nil, // TODO: I don't think we need this field
 		CodeChanges:       nil, // TODO: I don't think we need this field
 		Ver:               0,   // TODO: I don't think we need this field
-		Size:              0,   // TODO: I don't think we need this field
 	}
 }

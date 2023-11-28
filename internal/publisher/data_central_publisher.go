@@ -34,6 +34,9 @@ func (p *DataCentralPublisher) Publish(ctx context.Context, msg types.Message) e
 		"numRevertedBlocks", len(msg.RevertedBlocks),
 		"numNewBlocks", len(msg.NewBlocks))
 
+	if len(msg.RevertedBlocks) > 0 {
+		p.logger.Warnf("%d of blocks is re-orged", len(msg.RevertedBlocks))
+	}
 	for _, b := range msg.NewBlocks {
 		data, err := p.packMsgData(b)
 		if err != nil {

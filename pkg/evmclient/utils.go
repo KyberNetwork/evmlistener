@@ -86,6 +86,7 @@ func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 		ParentHash:   header.ParentHash,
 		Transactions: txns,
 		Header:       header,
+		Size:         block.Size(),
 		ReorgedHash:  "",  // This field will be fill later
 		Logs:         nil, // This field will be fill later
 	}
@@ -171,6 +172,7 @@ func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
 		ParentHash:   header.ParentHash,
 		Transactions: txns,
 		Header:       header,
+		Size:         block.Size(),
 		ReorgedHash:  "",  // This field will be fill later
 		Logs:         nil, // This field will be fill later
 	}
