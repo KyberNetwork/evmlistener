@@ -12,15 +12,17 @@ import (
 	evmPubsub "github.com/KyberNetwork/evmlistener/pkg/pubsub"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/KyberNetwork/evmlistener/protobuf/pb"
-	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/proto"
 )
 
-func TestClient_ApplyClientConfig(t *testing.T) {
+// nolint
+func TestDataCentralPublisher_Publish(t *testing.T) {
 	ctx := context.TODO()
-	c, srv, topic, sub := createFakePubsub(t, ctx)
+	c, srv, topic, sub := initFakePubsub(t, ctx)
 	defer topic.Stop()
 	defer c.Close()
 	defer srv.Close()
@@ -28,15 +30,10 @@ func TestClient_ApplyClientConfig(t *testing.T) {
 	client, err := evmPubsub.InitPubsub(ctx, c.Project(),
 		option.WithEndpoint(srv.Addr),
 		option.WithoutAuthentication(),
-		option.WithGRPCDialOption(grpc.WithInsecure()))
+		option.WithGRPCDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	//srv.SetAutoPublishResponse(false)
-	//srv.AddPublishResponse(&pb.PublishResponse{
-	//	MessageIds: []string{"1"},
-	//}, nil)
 
 	publisher := NewDataCentralPublisher(client, Config{
 		Topic:       topic.ID(),
@@ -111,12 +108,14 @@ func TestClient_ApplyClientConfig(t *testing.T) {
 		case <-childCtx.Done():
 			t.Log("Done context")
 			done()
+
 			return
 		}
 	}
 }
 
 func getBlockFromSub(t *testing.T, ctx context.Context, sub *pubsub.Subscription, sender chan<- *pb.Block) {
+	t.Helper()
 	sub.ReceiveSettings.NumGoroutines = 1
 
 	err := sub.Receive(ctx, func(ctx context.Context, message *pubsub.Message) {
@@ -140,14 +139,16 @@ func getBlockFromSub(t *testing.T, ctx context.Context, sub *pubsub.Subscription
 	assert.NoError(t, err)
 }
 
-func createFakePubsub(t *testing.T, ctx context.Context) (*pubsub.Client, *pstest.Server, *pubsub.Topic, *pubsub.Subscription) {
+func initFakePubsub(t *testing.T, ctx context.Context) (
+	*pubsub.Client, *pstest.Server, *pubsub.Topic, *pubsub.Subscription,
+) {
 	t.Helper()
 	srv := pstest.NewServer()
 
 	c, err := pubsub.NewClient(ctx, "P",
 		option.WithEndpoint(srv.Addr),
 		option.WithoutAuthentication(),
-		option.WithGRPCDialOption(grpc.WithInsecure()))
+		option.WithGRPCDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 	if err != nil {
 		t.Fatal(err)
 	}

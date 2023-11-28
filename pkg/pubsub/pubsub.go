@@ -30,7 +30,9 @@ func InitPubsub(ctx context.Context, projectID string, opts ...option.ClientOpti
 	}, nil
 }
 
-func (p *Client) Publish(ctx context.Context, topic, orderingKey string, data []byte, extra map[string]string) (string, error) {
+func (p *Client) Publish(ctx context.Context, topic, orderingKey string, data []byte, extra map[string]string) (
+	string, error,
+) {
 	t := p.client.Topic(topic)
 	t.EnableMessageOrdering = true
 	defer t.Stop()
