@@ -43,14 +43,14 @@ func (p *DataCentralPublisher) Publish(ctx context.Context, msg types.Message) e
 		}
 		extra := p.extractExtraData(b)
 
-		err = p.client.Publish(ctx, p.config.Topic, p.config.OrderingKey, data, extra)
+		msgID, err := p.client.Publish(ctx, p.config.Topic, p.config.OrderingKey, data, extra)
 		if err != nil {
-			p.logger.Errorf("error publish block %d to pubsub: %v", b.Number.Uint64(), err)
+			p.logger.Errorf("error publish block %d to pubsub: %v", b.Header.Number.Uint64(), err)
 
 			return err
 		}
 
-		p.logger.Debugf("Done publish block %d to msg queue", b.Number.Uint64())
+		p.logger.Debugf("Done publish block %d with message id %s", b.Header.Number.Uint64(), msgID)
 	}
 
 	return nil
@@ -58,10 +58,10 @@ func (p *DataCentralPublisher) Publish(ctx context.Context, msg types.Message) e
 
 func (p *DataCentralPublisher) extractExtraData(block types.Block) map[string]string {
 	return map[string]string{
-		"block_number":    block.Number.String(),
+		"block_number":    block.Header.Number.String(),
 		"block_hash":      block.Hash,
-		"parent_hash":     block.ParentHash,
-		"block_timestamp": strconv.Itoa(int(block.Timestamp)),
+		"parent_hash":     block.Header.ParentHash,
+		"block_timestamp": strconv.Itoa(int(block.Header.Timestamp)),
 	}
 }
 

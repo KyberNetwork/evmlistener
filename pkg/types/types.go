@@ -149,7 +149,7 @@ func (b *Block) ToProtobuf() *pb.Block {
 
 	return &pb.Block{
 		Hash:              []byte(b.Hash),
-		Number:            b.Number.Uint64(),
+		Number:            b.Header.Number.Uint64(),
 		Header:            header,
 		TransactionTraces: txns,
 		Logs:              logs,

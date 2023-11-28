@@ -127,14 +127,39 @@ func (c *EVMClientMock) SubscribeNewHead(ctx context.Context, ch chan<- *types.H
 }
 
 func (c *EVMClientMock) GetFullBlockByHash(ctx context.Context, hash string) (types.Block, error) {
-	header, _ := c.HeaderByHash(ctx, hash)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	header, ok := c.headerMap[ethcommon.HexToHash(hash)]
+	if !ok {
+		return types.Block{}, errors.New("block not found") //nolint
+	}
 
 	return types.Block{
 		Number:     header.Number,
-		Hash:       header.Hash,
-		Timestamp:  header.Timestamp,
-		ParentHash: header.ParentHash,
-		Header:     *header,
+		Hash:       hash,
+		Timestamp:  header.Time,
+		ParentHash: common.ToHex(header.ParentHash),
+		Header: types.Header{
+			Hash:             hash,
+			ParentHash:       header.ParentHash.Hex(),
+			Number:           header.Number,
+			Time:             header.Time,
+			UncleHash:        header.UncleHash.Hex(),
+			Coinbase:         header.Coinbase.Hex(),
+			StateRoot:        header.Root.Hex(),
+			TransactionsRoot: header.TxHash.Hex(),
+			ReceiptRoot:      header.ReceiptHash.Hex(),
+			LogsBloom:        header.Bloom.Bytes(),
+			Difficulty:       header.Difficulty,
+			GasLimit:         header.GasLimit,
+			GasUsed:          header.GasUsed,
+			Timestamp:        header.Time,
+			ExtraData:        header.Extra,
+			MixHash:          header.MixDigest.Hex(),
+			Nonce:            header.Nonce.Uint64(),
+			BaseFeePerGas:    header.BaseFee,
+		},
 	}, nil
 }
 
