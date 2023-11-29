@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -53,7 +54,10 @@ func (ts *StreamTestSuite) TestPublish() {
 	}
 
 	for _, test := range tests {
-		err := ts.s.Publish(context.Background(), topic, test.msg)
+		data, err := json.Marshal(test.msg)
+		ts.Require().NoError(err)
+
+		err = ts.s.Publish(context.Background(), topic, data)
 		ts.Require().NoError(err)
 
 		res, err := ts.s.client.XRevRangeN(context.Background(), topic, "+", "-", 1).Result()

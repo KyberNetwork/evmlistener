@@ -27,13 +27,14 @@ export REDIS_MASTER_NAME=""
 export REDIS_ADDRS="localhost:6379"
 export REDIS_DB=0
 export REDIS_USERNAME=""
-export REIDS_PASSWORD=""
+export REDIS_PASSWORD=""
 export REDIS_KEY_PREFIX="test-listener-polygon:"
 export REDIS_READ_TIMEOUT=0
-export REIDS_WRITE_TIMEOUT=0
+export REDIS_WRITE_TIMEOUT=0
 
 export PUBLISHER_TOPIC="test-listener-polygon-topic"
 export PUBLISHER_MAX_LEN=10
+export PUBLISHER_TYPE="redis-stream"
 
 export MAX_NUM_BLOCKS=128
 export BLOCK_EXPIRATION=10m

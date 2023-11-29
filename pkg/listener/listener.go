@@ -116,9 +116,16 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (t
 		return types.Block{}, err
 	}
 
+	block, err := getFullBlockByHash(ctx, l.httpEVMClient, header.Hash)
+	if err != nil {
+		l.l.Errorw("Fail to get block by block hash", "hash", header.Hash, "error", err)
+
+		return types.Block{}, err
+	}
+
 	l.l.Debugw("Handle new head success", "hash", header.Hash)
 
-	return headerToBlock(header, logs), nil
+	return toBlock(logs, block), nil
 }
 
 func (l *Listener) getBlocks(ctx context.Context, fromBlock, toBlock uint64) ([]types.Block, error) {

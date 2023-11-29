@@ -41,6 +41,26 @@ func getLogsByBlockHash(
 	return logs, err
 }
 
+// getFullBlockByHash returns transactions by block hash, retry up to 3 times.
+func getFullBlockByHash(
+	ctx context.Context, evmClient evmclient.IClient, hash string,
+) (block types.Block, err error) {
+	for i := 0; i < 3; i++ {
+		block, err = evmClient.GetFullBlockByHash(ctx, hash)
+		if err == nil {
+			return block, nil
+		}
+
+		if errors.Is(err, ethereum.NotFound) && err.Error() != errStringUnknownBlock {
+			return types.Block{}, err
+		}
+
+		time.Sleep(defaultRetryInterval)
+	}
+
+	return types.Block{}, err
+}
+
 func getBlocks(
 	ctx context.Context, evmClient evmclient.IClient, fromBlock uint64, toBlock uint64,
 ) ([]types.Block, error) {
@@ -90,17 +110,17 @@ func getHeaderByHash(
 func getBlockByHash(
 	ctx context.Context, evmClient evmclient.IClient, hash string,
 ) (types.Block, error) {
-	header, err := getHeaderByHash(ctx, evmClient, hash)
-	if err != nil {
-		return types.Block{}, err
-	}
-
 	logs, err := getLogsByBlockHash(ctx, evmClient, hash)
 	if err != nil {
 		return types.Block{}, err
 	}
 
-	return headerToBlock(header, logs), nil
+	fullBlock, err := getFullBlockByHash(ctx, evmClient, hash)
+	if err != nil {
+		return types.Block{}, err
+	}
+
+	return toBlock(logs, fullBlock), nil
 }
 
 func getHeaderByNumber(
@@ -135,15 +155,16 @@ func getBlockByNumber(
 		return types.Block{}, err
 	}
 
-	return headerToBlock(header, logs), nil
+	block, err := getFullBlockByHash(ctx, evmClient, header.Hash)
+	if err != nil {
+		return types.Block{}, err
+	}
+
+	return toBlock(logs, block), nil
 }
 
-func headerToBlock(header *types.Header, logs []types.Log) types.Block {
-	return types.Block{
-		Hash:       header.Hash,
-		Number:     header.Number,
-		Timestamp:  header.Time,
-		ParentHash: header.ParentHash,
-		Logs:       logs,
-	}
+func toBlock(logs []types.Log, fullBlock types.Block) types.Block {
+	fullBlock.Logs = logs
+
+	return fullBlock
 }

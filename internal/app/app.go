@@ -4,9 +4,11 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/KyberNetwork/evmlistener/internal/publisher"
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/listener"
+	"github.com/KyberNetwork/evmlistener/pkg/pubsub"
 	"github.com/KyberNetwork/evmlistener/pkg/redis"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
@@ -94,11 +96,36 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	blockExpiration := c.Duration(blockExpirationFlag.Name)
 	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxNumBlocks, blockExpiration)
 
-	maxLen := c.Int64(publisherMaxLenFlag.Name)
-	redisStream := redis.NewStream(redisClient, maxLen)
-
+	var publishSvc publisher.Publisher
 	topic := c.String(publisherTopicFlag.Name)
-	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, redisStream)
+
+	publisherType := c.String(publisherTypeFlag.Name)
+	switch publisherType {
+	case publisher.DataCenter.String():
+		// pubsub message queue publisher
+		orderingKey := c.String(pubsubOrderingKeyFlag.Name)
+		projectID := c.String(pubsubProjectIDFlag.Name)
+
+		pubsubCli, err := pubsub.InitPubsub(c.Context, projectID, topic)
+		if err != nil {
+			return nil, err
+		}
+
+		publishSvc = publisher.NewDataCenterPublisher(pubsubCli, publisher.Config{
+			Topic:       topic,
+			OrderingKey: orderingKey,
+		})
+
+	default:
+		maxLen := c.Int64(publisherMaxLenFlag.Name)
+		streamCli := redis.NewStream(redisClient, maxLen)
+
+		publishSvc = publisher.NewRedisStreamPublisher(streamCli, publisher.Config{
+			Topic: topic,
+		})
+	}
+
+	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publishSvc)
 
 	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval), nil
 }

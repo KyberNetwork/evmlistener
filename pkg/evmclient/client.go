@@ -49,6 +49,7 @@ type IClient interface {
 	FilterLogs(context.Context, FilterQuery) ([]types.Log, error)
 	HeaderByHash(context.Context, string) (*types.Header, error)
 	HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
+	GetFullBlockByHash(context.Context, string) (types.Block, error)
 }
 
 type Client struct {
@@ -290,6 +291,42 @@ func (c *Client) FilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, er
 		return c.zksyncFilterLogs(ctx, q)
 	default:
 		return c.ethFilterLogs(ctx, q)
+	}
+}
+
+func (c *Client) GetFullBlockByHash(ctx context.Context, hash string) (types.Block, error) {
+	switch c.chainID {
+	case chainIDFantom:
+		block, err := c.ftmClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
+		if err != nil {
+			return types.Block{}, err
+		}
+
+		return convertEthBlock(hash, block), nil
+
+	case chainIDAvalanche:
+		block, err := c.avaxClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
+		if err != nil {
+			return types.Block{}, err
+		}
+
+		return convertAvaxBlock(hash, block), nil
+
+	case chainIDZKSync:
+		block, err := c.zksyncClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
+		if err != nil {
+			return types.Block{}, err
+		}
+
+		return convertEthBlock(hash, block), nil
+
+	default:
+		block, err := c.ethClient.BlockByHash(ctx, ethcommon.HexToHash(hash))
+		if err != nil {
+			return types.Block{}, err
+		}
+
+		return convertEthBlock(hash, block), nil
 	}
 }
 
