@@ -11,6 +11,7 @@ on:
       - main
       - release
       - ci
+      - main-datacenter
   pull_request:
     branches:
       - "*"
@@ -112,6 +113,7 @@ jobs:
       contains('
         refs/heads/main
         refs/heads/release
+        refs/heads/main-datacenter
       ', github.ref)
     runs-on: [ubuntu-22.04]
     needs:
