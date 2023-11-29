@@ -25,6 +25,7 @@ func InitPubsub(ctx context.Context, projectID, topicID string, opts ...option.C
 		return nil, err
 	}
 
+	// init topic
 	t := client.Topic(topicID)
 	t.EnableMessageOrdering = true
 
@@ -38,7 +39,7 @@ func InitPubsub(ctx context.Context, projectID, topicID string, opts ...option.C
 func (p *Client) Publish(ctx context.Context, orderingKey string,
 	data []byte, extra map[string]string,
 ) (string, error) {
-	p.logger.Infof("publishing message to topic %s", p.topic.ID())
+	p.logger.Infof("publishing message to topic %s with ordering key %s", p.topic.ID(), orderingKey)
 	result := p.topic.Publish(ctx, &pubsub.Message{
 		Data:        data,
 		Attributes:  extra,
@@ -47,15 +48,8 @@ func (p *Client) Publish(ctx context.Context, orderingKey string,
 
 	id, err := result.Get(ctx)
 	if err != nil {
-		p.logger.Errorf("error publishing message id %s to topic %s: %v", id, p.topic.ID(), err)
+		p.logger.Errorf("error publishing message to topic %s: %v", p.topic.ID(), err)
 	}
 
 	return id, err
-}
-
-func (p *Client) initTopic(topicID string) *pubsub.Topic {
-	t := p.client.Topic(topicID)
-	t.EnableMessageOrdering = true
-
-	return t
 }
