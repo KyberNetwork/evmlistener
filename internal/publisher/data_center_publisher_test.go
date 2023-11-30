@@ -64,6 +64,31 @@ func TestDataCenterPublisher_Publish(t *testing.T) {
 					Difficulty:    big.NewInt(22),
 					BaseFeePerGas: big.NewInt(222),
 				},
+				Transactions: []types.Txn{
+					{
+						To:       "",
+						Nonce:    0,
+						GasPrice: nil,
+						GasLimit: 0,
+						Value:    nil,
+						Input:    nil,
+						V:        nil,
+						R:        nil,
+						S:        nil,
+						Type:     0,
+						AccessList: []*types.AccessTuple{
+							{
+								Address:     "",
+								StorageKeys: nil,
+							},
+						},
+						MaxFeePerGas:         nil,
+						MaxPriorityFeePerGas: nil,
+						Hash:                 "",
+						From:                 "",
+						TransactionIndex:     0,
+					},
+				},
 			},
 			{
 				Hash: "block3",

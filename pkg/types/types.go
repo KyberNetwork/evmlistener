@@ -95,8 +95,10 @@ func (tx *Txn) ToProtobuf() *pb.TransactionTrace {
 
 	accessList := make([]*pb.AccessTuple, len(tx.AccessList))
 	for i, a := range tx.AccessList {
-		accessList[i].Address = []byte(a.Address)
-		accessList[i].StorageKeys = a.StorageKeys
+		accessList[i] = &pb.AccessTuple{
+			Address:     []byte(a.Address),
+			StorageKeys: a.StorageKeys,
+		}
 	}
 
 	gasPrice := &pb.BigInt{Bytes: big.NewInt(0).Bytes()}
