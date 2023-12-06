@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/KyberNetwork/evmlistener/protobuf/pb"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Header contains block header information.
@@ -43,12 +44,12 @@ func (h *Header) ToProtobuf(blockHash string) *pb.BlockHeader {
 	}
 
 	return &pb.BlockHeader{
-		ParentHash:       []byte(h.ParentHash),
-		UncleHash:        []byte(h.UncleHash),
-		Coinbase:         []byte(h.Coinbase),
-		StateRoot:        []byte(h.StateRoot),
-		TransactionsRoot: []byte(h.TransactionsRoot),
-		ReceiptRoot:      []byte(h.ReceiptRoot),
+		ParentHash:       common.FromHex(h.ParentHash),
+		UncleHash:        common.FromHex(h.UncleHash),
+		Coinbase:         common.FromHex(h.Coinbase),
+		StateRoot:        common.FromHex(h.StateRoot),
+		TransactionsRoot: common.FromHex(h.TransactionsRoot),
+		ReceiptRoot:      common.FromHex(h.ReceiptRoot),
 		LogsBloom:        h.LogsBloom,
 		Difficulty:       difficulty,
 		Number:           h.Number.Uint64(),
@@ -56,9 +57,9 @@ func (h *Header) ToProtobuf(blockHash string) *pb.BlockHeader {
 		GasUsed:          h.GasUsed,
 		Timestamp:        h.Timestamp,
 		ExtraData:        h.ExtraData,
-		MixHash:          []byte(h.MixHash),
+		MixHash:          common.FromHex(h.MixHash),
 		Nonce:            h.Nonce,
-		Hash:             []byte(blockHash),
+		Hash:             common.FromHex(blockHash),
 		BaseFeePerGas:    baseFeePerGas,
 		TotalDifficulty:  nil, // TODO: not found in the RPC call
 	}
@@ -96,7 +97,7 @@ func (tx *Txn) ToProtobuf() *pb.TransactionTrace {
 	accessList := make([]*pb.AccessTuple, len(tx.AccessList))
 	for i, a := range tx.AccessList {
 		accessList[i] = &pb.AccessTuple{
-			Address:     []byte(a.Address),
+			Address:     common.FromHex(a.Address),
 			StorageKeys: a.StorageKeys,
 		}
 	}
@@ -119,7 +120,7 @@ func (tx *Txn) ToProtobuf() *pb.TransactionTrace {
 	}
 
 	return &pb.TransactionTrace{
-		To:                   []byte(tx.To),
+		To:                   common.FromHex(tx.To),
 		Nonce:                tx.Nonce,
 		GasPrice:             gasPrice,
 		GasLimit:             tx.GasLimit,
@@ -132,8 +133,8 @@ func (tx *Txn) ToProtobuf() *pb.TransactionTrace {
 		AccessList:           accessList,
 		MaxFeePerGas:         maxFeePerGas,
 		MaxPriorityFeePerGas: maxPriorityFeePerGas,
-		Hash:                 []byte(tx.Hash),
-		From:                 []byte(tx.From),
+		Hash:                 common.FromHex(tx.Hash),
+		From:                 common.FromHex(tx.From),
 		TransactionIndex:     &tx.TransactionIndex,
 		GasUsed:              0,   // TODO: not found in the RPC call
 		Receipt:              nil, // TODO: not found in the RPC call
@@ -177,7 +178,7 @@ func (b *Block) ToProtobuf() *pb.Block {
 	}
 
 	return &pb.Block{
-		Hash:              []byte(b.Hash),
+		Hash:              common.FromHex(b.Hash),
 		Number:            b.Header.Number.Uint64(),
 		Header:            header,
 		TransactionTraces: txns,
