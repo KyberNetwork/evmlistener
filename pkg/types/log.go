@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/KyberNetwork/evmlistener/protobuf/pb"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -112,17 +113,17 @@ func (l *Log) ToProtobuf() *pb.Log {
 	topics := make([][]byte, len(l.Topics))
 
 	for i, t := range l.Topics {
-		topics[i] = []byte(t)
+		topics[i] = common.FromHex(t)
 	}
 
 	return &pb.Log{
-		Address:             []byte(l.Address),
+		Address:             common.FromHex(l.Address),
 		Topics:              topics,
 		Data:                l.Data,
-		BlockHash:           []byte(l.BlockHash),
+		BlockHash:           common.FromHex(l.BlockHash),
 		BlockNumber:         l.BlockNumber,
 		TransactionIndex:    uint32(l.TxIndex),
-		TransactionHash:     []byte(l.TxHash),
+		TransactionHash:     common.FromHex(l.TxHash),
 		TransactionLogIndex: uint32(l.Index),
 		BlockIndex:          0, // TODO: I don't know how to get this, and is it necessary?
 	}

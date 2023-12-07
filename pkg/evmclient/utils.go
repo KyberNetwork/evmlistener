@@ -1,6 +1,7 @@
 package evmclient
 
 import (
+	"github.com/KyberNetwork/evmlistener/pkg/common"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	avaxtypes "github.com/ava-labs/coreth/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -9,12 +10,12 @@ import (
 // nolint:dupl
 func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 	header := types.Header{
-		ParentHash:       block.ParentHash().Hex(),
-		UncleHash:        block.UncleHash().Hex(),
-		Coinbase:         block.Coinbase().Hex(),
-		StateRoot:        block.Root().Hex(),
-		TransactionsRoot: block.TxHash().Hex(),
-		ReceiptRoot:      block.ReceiptHash().Hex(),
+		ParentHash:       common.ToHex(block.ParentHash()),
+		UncleHash:        common.ToHex(block.UncleHash()),
+		Coinbase:         common.ToHex(block.Coinbase()),
+		StateRoot:        common.ToHex(block.Root()),
+		TransactionsRoot: common.ToHex(block.TxHash()),
+		ReceiptRoot:      common.ToHex(block.ReceiptHash()),
 		LogsBloom:        block.Bloom().Bytes(),
 		Difficulty:       block.Difficulty(),
 		Number:           block.Number(),
@@ -22,7 +23,7 @@ func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 		GasUsed:          block.GasUsed(),
 		Timestamp:        block.Time(),
 		ExtraData:        block.Extra(),
-		MixHash:          block.MixDigest().Hex(),
+		MixHash:          common.ToHex(block.MixDigest()),
 		Nonce:            block.Nonce(),
 		Hash:             hash,
 		BaseFeePerGas:    block.BaseFee(),
@@ -40,7 +41,7 @@ func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 			}
 
 			accessList[j] = &types.AccessTuple{
-				Address:     a.Address.Hex(),
+				Address:     common.ToHex(a.Address),
 				StorageKeys: storageKeys,
 			}
 		}
@@ -60,7 +61,7 @@ func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 		}
 
 		txns[i] = types.Txn{
-			To:                   tx.To().Hex(),
+			To:                   common.ToHex(tx.To()),
 			Nonce:                tx.Nonce(),
 			GasPrice:             tx.GasPrice(),
 			GasLimit:             tx.Gas(),
@@ -73,8 +74,8 @@ func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 			AccessList:           accessList,
 			MaxFeePerGas:         tx.GasFeeCap(),
 			MaxPriorityFeePerGas: tx.GasTipCap(),
-			Hash:                 tx.Hash().Hex(),
-			From:                 from.Hex(),
+			Hash:                 common.ToHex(tx.Hash()),
+			From:                 common.ToHex(from),
 			TransactionIndex:     uint64(i),
 		}
 	}
@@ -95,12 +96,12 @@ func convertEthBlock(hash string, block *ethtypes.Block) types.Block {
 // nolint:dupl
 func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
 	header := types.Header{
-		ParentHash:       block.ParentHash().Hex(),
-		UncleHash:        block.UncleHash().Hex(),
-		Coinbase:         block.Coinbase().Hex(),
-		StateRoot:        block.Root().Hex(),
-		TransactionsRoot: block.TxHash().Hex(),
-		ReceiptRoot:      block.ReceiptHash().Hex(),
+		ParentHash:       common.ToHex(block.ParentHash()),
+		UncleHash:        common.ToHex(block.UncleHash()),
+		Coinbase:         common.ToHex(block.Coinbase()),
+		StateRoot:        common.ToHex(block.Root()),
+		TransactionsRoot: common.ToHex(block.TxHash()),
+		ReceiptRoot:      common.ToHex(block.ReceiptHash()),
 		LogsBloom:        block.Bloom().Bytes(),
 		Difficulty:       block.Difficulty(),
 		Number:           block.Number(),
@@ -108,7 +109,7 @@ func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
 		GasUsed:          block.GasUsed(),
 		Timestamp:        block.Time(),
 		ExtraData:        block.Extra(),
-		MixHash:          block.MixDigest().Hex(),
+		MixHash:          common.ToHex(block.MixDigest()),
 		Nonce:            block.Nonce(),
 		Hash:             hash,
 		BaseFeePerGas:    block.BaseFee(),
@@ -126,7 +127,7 @@ func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
 			}
 
 			accessList[j] = &types.AccessTuple{
-				Address:     a.Address.Hex(),
+				Address:     common.ToHex(a.Address),
 				StorageKeys: storageKeys,
 			}
 		}
@@ -146,7 +147,7 @@ func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
 		}
 
 		txns[i] = types.Txn{
-			To:                   tx.To().Hex(),
+			To:                   common.ToHex(tx.To()),
 			Nonce:                tx.Nonce(),
 			GasPrice:             tx.GasPrice(),
 			GasLimit:             tx.Gas(),
@@ -159,8 +160,8 @@ func convertAvaxBlock(hash string, block *avaxtypes.Block) types.Block {
 			AccessList:           accessList,
 			MaxFeePerGas:         tx.GasFeeCap(),
 			MaxPriorityFeePerGas: tx.GasTipCap(),
-			Hash:                 tx.Hash().Hex(),
-			From:                 from.Hex(),
+			Hash:                 common.ToHex(tx.Hash()),
+			From:                 common.ToHex(from),
 			TransactionIndex:     uint64(i),
 		}
 	}
