@@ -160,6 +160,23 @@ type Message struct {
 	NewBlocks      []Block `json:"newBlocks"`
 }
 
+func (m Message) ToProtobuf() *pb.Message {
+	revertedBlocks := make([]*pb.Block, len(m.RevertedBlocks))
+	for i, b := range m.RevertedBlocks {
+		revertedBlocks[i] = b.ToProtobuf()
+	}
+
+	newBlocks := make([]*pb.Block, len(m.NewBlocks))
+	for i, b := range m.NewBlocks {
+		newBlocks[i] = b.ToProtobuf()
+	}
+
+	return &pb.Message{
+		RevertedBlocks: revertedBlocks,
+		NewBlocks:      newBlocks,
+	}
+}
+
 func (b *Block) ToProtobuf() *pb.Block {
 	if b == nil {
 		return nil
