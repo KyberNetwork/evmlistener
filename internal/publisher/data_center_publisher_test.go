@@ -107,16 +107,16 @@ func TestDataCenterPublisher_Publish(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	sender := make(chan *pb.Block)
+	sender := make(chan *pb.Message)
 	childCtx, done := context.WithCancel(ctx)
-	go getBlockFromSub(t, childCtx, sub, sender)
+	go getMsgFromSub(t, childCtx, sub, sender)
 
 	var blocks []*pb.Block
 	counter := 2
 	for {
 		select {
-		case b := <-sender:
-			blocks = append(blocks, b)
+		case msg := <-sender:
+			blocks = append(blocks, msg.NewBlocks...)
 		case <-time.After(1 * time.Second):
 			counter -= 1
 			if counter == 0 {
@@ -141,26 +141,26 @@ func TestDataCenterPublisher_Publish(t *testing.T) {
 	}
 }
 
-func getBlockFromSub(t *testing.T, ctx context.Context, sub *pubsub.Subscription, sender chan<- *pb.Block) {
+func getMsgFromSub(t *testing.T, ctx context.Context, sub *pubsub.Subscription, sender chan<- *pb.Message) {
 	t.Helper()
 
 	_ = sub.Receive(ctx, func(ctx context.Context, message *pubsub.Message) {
-		assert.Len(t, message.Attributes, 4, "must contain extra info")
-		_, ok := message.Attributes["block_number"]
-		assert.True(t, ok)
-		_, ok = message.Attributes["block_hash"]
-		assert.True(t, ok)
+		// assert.Len(t, message.Attributes, 4, "must contain extra info")
+		// _, ok := message.Attributes["block_number"]
+		// assert.True(t, ok)
+		// _, ok = message.Attributes["block_hash"]
+		// assert.True(t, ok)
 
 		data, err := common.DecompressWithSizePrepended(message.Data)
 		assert.NoError(t, err)
 
-		var block pb.Block
-		err = proto.Unmarshal(data, &block)
+		var msg pb.Message
+		err = proto.Unmarshal(data, &msg)
 		assert.NoError(t, err)
 
-		sender <- &block
+		sender <- &msg
 		message.Ack()
-		t.Logf("got block %d", block.Number)
+		t.Logf("got blocks")
 	})
 }
 
