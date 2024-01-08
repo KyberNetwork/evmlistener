@@ -411,11 +411,15 @@ func toEthereumFilterQuery(q FilterQuery) ethereum.FilterQuery {
 		addresses = append(addresses, ethcommon.HexToAddress(address))
 	}
 
-	topics := make([][]ethcommon.Hash, 0, len(q.Topics))
-	for i, ts := range q.Topics {
-		topics[i] = make([]ethcommon.Hash, 0, len(ts))
-		for _, t := range ts {
-			topics[i] = append(topics[i], ethcommon.HexToHash(t))
+	var topics [][]ethcommon.Hash
+	if len(q.Topics) > 0 {
+		topics = make([][]ethcommon.Hash, 0, len(q.Topics))
+		for _, ts := range q.Topics {
+			tps := make([]ethcommon.Hash, 0, len(ts))
+			for _, t := range ts {
+				tps = append(tps, ethcommon.HexToHash(t))
+			}
+			topics = append(topics, tps)
 		}
 	}
 
