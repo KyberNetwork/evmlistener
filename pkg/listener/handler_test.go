@@ -76,7 +76,7 @@ func (ts *HandlerTestSuite) TestHandle() {
 	// Handle for normal block (chain was not re-organized).
 	ts.evmClient.Next()
 	hash := "0xc0c29448be86bca9d0db94b79cd1a6bd1361aed1e394d3a2a218fb98b159ab74"
-	b, err = getBlockByHash(context.Background(), ts.evmClient, hash)
+	b, err = getBlockByHash(context.Background(), ts.evmClient, hash, true, nil, nil)
 	ts.Require().NoError(err)
 
 	err = ts.handler.Handle(context.Background(), b)
@@ -93,7 +93,7 @@ func (ts *HandlerTestSuite) TestHandle() {
 	// Handle for far away block (lost connection).
 	ts.evmClient.SetHead(52)
 	hash = "0x132c1eb1799a5219b055674177ba95e946feb5f011c7c1409630d42c0581ee52"
-	b, err = getBlockByHash(context.Background(), ts.evmClient, hash)
+	b, err = getBlockByHash(context.Background(), ts.evmClient, hash, true, nil, nil)
 	ts.Require().NoError(err)
 
 	err = ts.handler.Handle(context.Background(), b)
@@ -113,7 +113,7 @@ func (ts *HandlerTestSuite) TestHandle() {
 	ts.Require().NoError(err)
 
 	hash = "0xfe5db0e13993eb721f8174edc783e92dcee70e5a2eb3cd87e8b6c7ba5ab24986"
-	b, err = getBlockByHash(context.Background(), ts.evmClient, hash)
+	b, err = getBlockByHash(context.Background(), ts.evmClient, hash, true, nil, nil)
 	ts.Require().NoError(err)
 
 	err = ts.handler.Handle(context.Background(), b)
@@ -140,7 +140,7 @@ func (ts *HandlerTestSuite) TestHandle() {
 
 	ts.evmClient.Next()
 	hash = "0x2394b0b03959156ec90096deadd34f68195a8d8f5f1e5438ea237be7675178c2"
-	b, err = getBlockByHash(context.Background(), ts.evmClient, hash)
+	b, err = getBlockByHash(context.Background(), ts.evmClient, hash, true, nil, nil)
 	ts.Require().NoError(err)
 
 	err = ts.handler.Handle(context.Background(), b)

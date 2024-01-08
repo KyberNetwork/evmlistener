@@ -19,19 +19,26 @@ type Handler struct {
 	blockKeeper block.Keeper
 	publisher   pubsub.Publisher
 	l           *zap.SugaredLogger
+	option      *FilterOption
 }
 
 // NewHandler ...
 func NewHandler(
 	l *zap.SugaredLogger, topic string, evmClient evmclient.IClient,
-	blockKeeper block.Keeper, publisher pubsub.Publisher,
+	blockKeeper block.Keeper, publisher pubsub.Publisher, options ...Option,
 ) *Handler {
+	var opts FilterOption
+	for _, v := range options {
+		v(&opts)
+	}
+
 	return &Handler{
 		topic:       topic,
 		evmClient:   evmClient,
 		blockKeeper: blockKeeper,
 		publisher:   publisher,
 		l:           l,
+		option:      &opts,
 	}
 }
 
@@ -79,7 +86,8 @@ func (h *Handler) Init(ctx context.Context) error {
 	fromBlock := toBlock - uint64(h.blockKeeper.Cap()) + 1
 
 	h.l.Infow("Get blocks from node", "from", fromBlock, "to", toBlock)
-	blocks, err := getBlocks(ctx, h.evmClient, fromBlock, toBlock)
+	blocks, err := GetBlocks(ctx, h.evmClient, fromBlock, toBlock, h.option.withLogs,
+		h.option.filterContracts, h.option.filterTopics)
 	if err != nil {
 		h.l.Errorw("Fail to get blocks", "from", fromBlock, "to", toBlock, "error", err)
 
@@ -112,7 +120,8 @@ func (h *Handler) getBlock(ctx context.Context, hash string) (types.Block, error
 		return types.Block{}, err
 	}
 
-	b, err = getBlockByHash(ctx, h.evmClient, hash)
+	b, err = getBlockByHash(ctx, h.evmClient, hash, h.option.withLogs, h.option.filterContracts,
+		h.option.filterTopics)
 	if err != nil {
 		h.l.Errorw("Fail to get block from ndoe", "hash", hash, "error", err)
 

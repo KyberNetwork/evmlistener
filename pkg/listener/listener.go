@@ -47,14 +47,21 @@ type Listener struct {
 
 	queue       *Queue
 	maxQueueLen int
+
+	option FilterOption
 }
 
 // New ...
 func New(
 	l *zap.SugaredLogger, wsEVMClient evmclient.IClient,
 	httpEVMClient evmclient.IClient, handler *Handler,
-	sanityEVMClient evmclient.IClient, sanityCheckInterval time.Duration,
+	sanityEVMClient evmclient.IClient, sanityCheckInterval time.Duration, opts ...Option,
 ) *Listener {
+	var o FilterOption
+	for _, v := range opts {
+		v(&o)
+	}
+
 	return &Listener{
 		l: l,
 
@@ -67,6 +74,7 @@ func New(
 
 		queue:       NewQueue(maxQueueLen),
 		maxQueueLen: maxQueueLen,
+		option:      o,
 	}
 }
 
@@ -108,14 +116,15 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (t
 	var logs []types.Log
 
 	l.l.Debugw("Handle for new head", "hash", header.Hash)
+	opts := l.option
+	if opts.withLogs {
+		logs, err = getLogsByBlockHash(ctx, l.httpEVMClient, header.Hash, opts.filterContracts, opts.filterTopics)
+		if err != nil {
+			l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash, "error", err)
 
-	logs, err = getLogsByBlockHash(ctx, l.httpEVMClient, header.Hash)
-	if err != nil {
-		l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash, "error", err)
-
-		return types.Block{}, err
+			return types.Block{}, err
+		}
 	}
-
 	l.l.Debugw("Handle new head success", "hash", header.Hash)
 
 	return headerToBlock(header, logs), nil
@@ -129,7 +138,8 @@ func (l *Listener) getBlocks(ctx context.Context, fromBlock, toBlock uint64) ([]
 		i := i
 		blkNum := uint64(i) + fromBlock
 		g.Go(func() error {
-			block, err := getBlockByNumber(ctx, l.httpEVMClient, new(big.Int).SetUint64(blkNum))
+			block, err := getBlockByNumber(ctx, l.httpEVMClient, new(big.Int).SetUint64(blkNum),
+				l.option.withLogs, l.option.filterContracts, l.option.filterTopics)
 			if err != nil {
 				l.l.Errorw("Fail to get block by number", "number", blkNum, "error", err)
 
@@ -286,11 +296,11 @@ func (l *Listener) Run(ctx context.Context) error {
 	defer l.l.Info("Stop listener service")
 
 	l.l.Info("Init handler")
-	err := l.handler.Init(ctx)
-	if err != nil {
-		l.l.Errorw("Fail to init handler", "error", err)
+	returnErr := l.handler.Init(ctx)
+	if returnErr != nil {
+		l.l.Errorw("Fail to init handler", "error", returnErr)
 
-		return err
+		return returnErr
 	}
 
 	l.setResuming(true)
@@ -306,9 +316,9 @@ func (l *Listener) Run(ctx context.Context) error {
 	// Synchronize blocks from node.
 	blockCh := make(chan types.Block, bufLen)
 	go func() {
-		err := l.syncBlocks(ctx, blockCh)
-		if err != nil {
-			l.l.Fatalw("Fail to sync blocks", "error", err)
+		returnErr = l.syncBlocks(ctx, blockCh)
+		if returnErr != nil {
+			l.l.Errorw("Fail to sync blocks", "error", returnErr)
 		}
 
 		close(blockCh)
@@ -328,7 +338,7 @@ func (l *Listener) Run(ctx context.Context) error {
 	for b := range blockCh {
 		l.l.Debugw("Receive new block",
 			"hash", b.Hash, "parent", b.ParentHash, "numLogs", len(b.Logs))
-		err = l.handler.Handle(ctx, b)
+		err := l.handler.Handle(ctx, b)
 		if err != nil {
 			l.l.Errorw("Fail to handle new block", "hash", b.Hash, "error", err)
 
@@ -340,7 +350,7 @@ func (l *Listener) Run(ctx context.Context) error {
 		l.mu.Unlock()
 	}
 
-	return nil
+	return returnErr
 }
 
 func (l *Listener) startMetricsCollector(_ context.Context) error {
