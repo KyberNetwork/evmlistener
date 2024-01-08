@@ -19,9 +19,9 @@ import (
 )
 
 const (
-	bufLen = 100
-
-	maxQueueLen = 256
+	bufLen                     = 100
+	maxQueueLen                = 256
+	defaultSanityCheckInterval = time.Minute
 
 	metricNameLastReceivedBlockNumber = "evmlistener_last_received_block_number"
 	metricNameLastCheckedBlockNumber  = "evmlistener_last_checked_block_number"
@@ -62,6 +62,10 @@ func New(
 	var o FilterOption
 	for _, v := range opts {
 		v(&o)
+	}
+
+	if sanityCheckInterval == 0 {
+		sanityCheckInterval = defaultSanityCheckInterval
 	}
 
 	return &Listener{
