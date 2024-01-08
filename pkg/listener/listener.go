@@ -252,6 +252,7 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 		case <-ticker.C:
 			if time.Since(lastReceivedTime) > l.sanityCheckInterval {
 				l.l.Errorw("Websocket connection is corrupted", "lastReceivedTime", lastReceivedTime)
+
 				return errConnectionCorrupted
 			}
 		case header := <-headerCh:
