@@ -2,7 +2,7 @@ module github.com/KyberNetwork/evmlistener
 
 go 1.21.0
 
-toolchain go1.21.1
+toolchain go1.21.4
 
 require (
 	github.com/KyberNetwork/kyber-trace-go v0.1.1

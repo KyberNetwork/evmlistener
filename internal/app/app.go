@@ -98,9 +98,11 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	redisStream := redis.NewStream(redisClient, maxLen)
 
 	topic := c.String(publisherTopicFlag.Name)
-	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, redisStream)
+	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, redisStream,
+		listener.WithEventLogs(nil, nil))
 
-	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval), nil
+	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval,
+		listener.WithEventLogs(nil, nil)), nil
 }
 
 const (

@@ -19,14 +19,16 @@ import (
 )
 
 const (
-	bufLen = 100
-
-	maxQueueLen = 256
+	bufLen                     = 100
+	maxQueueLen                = 256
+	defaultSanityCheckInterval = time.Minute
 
 	metricNameLastReceivedBlockNumber = "evmlistener_last_received_block_number"
 	metricNameLastCheckedBlockNumber  = "evmlistener_last_checked_block_number"
 	metricNameLastHandledBlockNumber  = "evmlistener_last_handled_block_number"
 )
+
+var errConnectionCorrupted = errors.New("connection is corrupted")
 
 // Listener represents a listener service for on-chain events.
 type Listener struct {
@@ -47,14 +49,25 @@ type Listener struct {
 
 	queue       *Queue
 	maxQueueLen int
+
+	option FilterOption
 }
 
 // New ...
 func New(
 	l *zap.SugaredLogger, wsEVMClient evmclient.IClient,
 	httpEVMClient evmclient.IClient, handler *Handler,
-	sanityEVMClient evmclient.IClient, sanityCheckInterval time.Duration,
+	sanityEVMClient evmclient.IClient, sanityCheckInterval time.Duration, opts ...Option,
 ) *Listener {
+	var o FilterOption
+	for _, v := range opts {
+		v(&o)
+	}
+
+	if sanityCheckInterval == 0 {
+		sanityCheckInterval = defaultSanityCheckInterval
+	}
+
 	return &Listener{
 		l: l,
 
@@ -67,6 +80,7 @@ func New(
 
 		queue:       NewQueue(maxQueueLen),
 		maxQueueLen: maxQueueLen,
+		option:      o,
 	}
 }
 
@@ -108,14 +122,15 @@ func (l *Listener) handleNewHeader(ctx context.Context, header *types.Header) (t
 	var logs []types.Log
 
 	l.l.Debugw("Handle for new head", "hash", header.Hash)
+	opts := l.option
+	if opts.withLogs {
+		logs, err = getLogsByBlockHash(ctx, l.httpEVMClient, header.Hash, opts.filterContracts, opts.filterTopics)
+		if err != nil {
+			l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash, "error", err)
 
-	logs, err = getLogsByBlockHash(ctx, l.httpEVMClient, header.Hash)
-	if err != nil {
-		l.l.Errorw("Fail to get logs by block hash", "hash", header.Hash, "error", err)
-
-		return types.Block{}, err
+			return types.Block{}, err
+		}
 	}
-
 	l.l.Debugw("Handle new head success", "hash", header.Hash)
 
 	return headerToBlock(header, logs), nil
@@ -129,7 +144,8 @@ func (l *Listener) getBlocks(ctx context.Context, fromBlock, toBlock uint64) ([]
 		i := i
 		blkNum := uint64(i) + fromBlock
 		g.Go(func() error {
-			block, err := getBlockByNumber(ctx, l.httpEVMClient, new(big.Int).SetUint64(blkNum))
+			block, err := getBlockByNumber(ctx, l.httpEVMClient, new(big.Int).SetUint64(blkNum),
+				l.option.withLogs, l.option.filterContracts, l.option.filterTopics)
 			if err != nil {
 				l.l.Errorw("Fail to get block by number", "number", blkNum, "error", err)
 
@@ -202,6 +218,7 @@ func (l *Listener) handleOldHeaders(ctx context.Context, blockCh chan<- types.Bl
 	return nil
 }
 
+//nolint:cyclop
 func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- types.Block) error {
 	l.l.Info("Start subscribing for new head of the chain")
 	headerCh := make(chan *types.Header, 1)
@@ -221,6 +238,10 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 		return err
 	}
 
+	ticker := time.NewTicker(l.sanityCheckInterval)
+	defer ticker.Stop()
+
+	lastReceivedTime := time.Now()
 	seq := uint64(1)
 	for {
 		select {
@@ -232,9 +253,16 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 			l.l.Errorw("Error while subscribing new head", "error", err)
 
 			return err
+		case <-ticker.C:
+			if time.Since(lastReceivedTime) > l.sanityCheckInterval {
+				l.l.Errorw("Websocket connection is corrupted", "lastReceivedTime", lastReceivedTime)
+
+				return errConnectionCorrupted
+			}
 		case header := <-headerCh:
 			l.l.Debugw("Receive new head of the chain", "header", header)
 
+			lastReceivedTime = time.Now()
 			l.mu.Lock()
 			if l.lastReceivedBlock == nil || l.lastReceivedBlock.Timestamp < header.Time {
 				l.lastReceivedBlock = &types.Block{
@@ -272,7 +300,8 @@ func (l *Listener) syncBlocks(ctx context.Context, blockCh chan types.Block) err
 			websocket.CloseNormalClosure, websocket.CloseServiceRestart) &&
 			!errors.Is(err, syscall.ECONNRESET) &&
 			!errors.Is(err, ethereum.NotFound) &&
-			err.Error() != errStringUnknownBlock {
+			err.Error() != errStringUnknownBlock &&
+			!errors.Is(err, errConnectionCorrupted) {
 			return err
 		}
 
@@ -286,11 +315,11 @@ func (l *Listener) Run(ctx context.Context) error {
 	defer l.l.Info("Stop listener service")
 
 	l.l.Info("Init handler")
-	err := l.handler.Init(ctx)
-	if err != nil {
-		l.l.Errorw("Fail to init handler", "error", err)
+	returnErr := l.handler.Init(ctx)
+	if returnErr != nil {
+		l.l.Errorw("Fail to init handler", "error", returnErr)
 
-		return err
+		return returnErr
 	}
 
 	l.setResuming(true)
@@ -306,9 +335,9 @@ func (l *Listener) Run(ctx context.Context) error {
 	// Synchronize blocks from node.
 	blockCh := make(chan types.Block, bufLen)
 	go func() {
-		err := l.syncBlocks(ctx, blockCh)
-		if err != nil {
-			l.l.Fatalw("Fail to sync blocks", "error", err)
+		returnErr = l.syncBlocks(ctx, blockCh)
+		if returnErr != nil {
+			l.l.Errorw("Fail to sync blocks", "error", returnErr)
 		}
 
 		close(blockCh)
@@ -328,7 +357,7 @@ func (l *Listener) Run(ctx context.Context) error {
 	for b := range blockCh {
 		l.l.Debugw("Receive new block",
 			"hash", b.Hash, "parent", b.ParentHash, "numLogs", len(b.Logs))
-		err = l.handler.Handle(ctx, b)
+		err := l.handler.Handle(ctx, b)
 		if err != nil {
 			l.l.Errorw("Fail to handle new block", "hash", b.Hash, "error", err)
 
@@ -340,7 +369,7 @@ func (l *Listener) Run(ctx context.Context) error {
 		l.mu.Unlock()
 	}
 
-	return nil
+	return returnErr
 }
 
 func (l *Listener) startMetricsCollector(_ context.Context) error {

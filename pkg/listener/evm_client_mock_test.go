@@ -71,11 +71,11 @@ func (c *EVMClientMock) Next() {
 	defer c.mu.Unlock()
 
 	c.head++
-
+	currentHead := c.head
 	// Publish new head for subscriptions.
 	for _, ch := range c.subHeadChs {
 		go func(ch chan<- *types.Header) {
-			header := c.headerMap[c.sequence[c.head]]
+			header := c.headerMap[c.sequence[currentHead]]
 			ch <- &types.Header{
 				Hash:       common.ToHex(header.Hash()),
 				ParentHash: common.ToHex(header.ParentHash),
@@ -108,10 +108,10 @@ func (c *EVMClientMock) SubscribeNewHead(ctx context.Context, ch chan<- *types.H
 	defer c.mu.Unlock()
 
 	c.subHeadChs = append(c.subHeadChs, ch)
-
+	currentHead := c.sequence[c.head]
 	// Publish current head to the channel.
 	go func() {
-		header := c.headerMap[c.sequence[c.head]]
+		header := c.headerMap[currentHead]
 		ch <- &types.Header{
 			Hash:       common.ToHex(header.Hash()),
 			ParentHash: common.ToHex(header.ParentHash),
