@@ -8,12 +8,8 @@ import (
 	"github.com/ava-labs/coreth/rpc"
 )
 
-func AvaxDialContext(ctx context.Context, rawurl string) (ethclient.Client, error) {
-	httpClient := rpc.WithHTTPClient(&http.Client{
-		Timeout: defaultRequestTimeout,
-	})
-
-	rpcClient, err := rpc.DialOptions(ctx, rawurl, httpClient)
+func AvaxDialContext(ctx context.Context, rawurl string, httpClient *http.Client) (ethclient.Client, error) {
+	rpcClient, err := rpc.DialOptions(ctx, rawurl, rpc.WithHTTPClient(httpClient))
 	if err != nil {
 		return nil, err
 	}

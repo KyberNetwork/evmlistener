@@ -68,11 +68,11 @@ func Dial(rawurl string) (*Client, error) {
 }
 
 func DialContext(ctx context.Context, rawurl string) (*Client, error) {
-	httpClient := rpc.WithHTTPClient(&http.Client{
+	httpClient := &http.Client{
 		Timeout: defaultRequestTimeout,
-	})
+	}
 
-	rpcClient, err := rpc.DialOptions(ctx, rawurl, httpClient)
+	rpcClient, err := rpc.DialOptions(ctx, rawurl, rpc.WithHTTPClient(httpClient))
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func DialContext(ctx context.Context, rawurl string) (*Client, error) {
 	case chainIDFantom:
 		client.ftmClient = ftmclient.NewClient(rpcClient)
 	case chainIDAvalanche:
-		client.avaxClient, err = AvaxDialContext(ctx, rawurl)
+		client.avaxClient, err = AvaxDialContext(ctx, rawurl, httpClient)
 	case chainIDZKSync:
 		client.zksyncClient = zksyncclient.NewClient(rpcClient)
 	default:
