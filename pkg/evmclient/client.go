@@ -3,24 +3,28 @@ package evmclient
 import (
 	"context"
 	"math/big"
+	"net/http"
+	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/common"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient/ftmclient"
 	zksyncclient "github.com/KyberNetwork/evmlistener/pkg/evmclient/zksync-client"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	avaxtypes "github.com/ava-labs/coreth/core/types"
-	avaxclient "github.com/ava-labs/coreth/ethclient"
+	aethclient "github.com/ava-labs/coreth/ethclient"
 	"github.com/ava-labs/coreth/interfaces"
 	"github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 const (
-	chainIDFantom    = 250
-	chainIDAvalanche = 43114
-	chainIDZKSync    = 324
+	chainIDFantom         = 250
+	chainIDAvalanche      = 43114
+	chainIDZKSync         = 324
+	defaultRequestTimeout = 10 * time.Second
 )
 
 type FilterQuery struct {
@@ -55,7 +59,7 @@ type Client struct {
 	chainID      uint64
 	ethClient    *ethclient.Client
 	ftmClient    *ftmclient.Client
-	avaxClient   avaxclient.Client
+	avaxClient   aethclient.Client
 	zksyncClient *zksyncclient.Client
 }
 
@@ -64,11 +68,16 @@ func Dial(rawurl string) (*Client, error) {
 }
 
 func DialContext(ctx context.Context, rawurl string) (*Client, error) {
-	ethClient, err := ethclient.DialContext(ctx, rawurl)
+	httpClient := rpc.WithHTTPClient(&http.Client{
+		Timeout: defaultRequestTimeout,
+	})
+
+	rpcClient, err := rpc.DialOptions(ctx, rawurl, httpClient)
 	if err != nil {
 		return nil, err
 	}
 
+	ethClient := ethclient.NewClient(rpcClient)
 	chainID, err := ethClient.ChainID(ctx)
 	if err != nil {
 		return nil, err
@@ -80,11 +89,11 @@ func DialContext(ctx context.Context, rawurl string) (*Client, error) {
 
 	switch client.chainID {
 	case chainIDFantom:
-		client.ftmClient, err = ftmclient.DialContext(ctx, rawurl)
+		client.ftmClient = ftmclient.NewClient(rpcClient)
 	case chainIDAvalanche:
-		client.avaxClient, err = avaxclient.DialContext(ctx, rawurl)
+		client.avaxClient, err = AvaxDialContext(ctx, rawurl)
 	case chainIDZKSync:
-		client.zksyncClient, err = zksyncclient.DialContext(ctx, rawurl)
+		client.zksyncClient = zksyncclient.NewClient(rpcClient)
 	default:
 		client.ethClient = ethClient
 	}
