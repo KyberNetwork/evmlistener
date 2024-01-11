@@ -31,6 +31,9 @@ linters:
     - depguard
     - revive
     - forbidigo
+    - inamedparam
+    - ireturn
+    - testifylint
 
 linters-settings:
   funlen:

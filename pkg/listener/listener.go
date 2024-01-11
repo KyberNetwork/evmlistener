@@ -231,6 +231,7 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 
 	defer sub.Unsubscribe()
 
+	l.l.Infow("Synchronize for old headers")
 	err = l.handleOldHeaders(ctx, blockCh)
 	if err != nil {
 		l.l.Errorw("Fail to handle old headers", "error", err)
@@ -238,6 +239,7 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 		return err
 	}
 
+	l.l.Infow("Start handling for new headers")
 	ticker := time.NewTicker(l.sanityCheckInterval)
 	defer ticker.Stop()
 
