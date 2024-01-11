@@ -2,7 +2,9 @@ package app
 
 import (
 	"context"
+	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
@@ -10,6 +12,10 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/redis"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
+)
+
+const (
+	defaultRequestTimeout = 10 * time.Second
 )
 
 // NewApp creates a new cli App instance with common flags pre-loaded.
@@ -45,8 +51,12 @@ func redisConfigFromCli(c *cli.Context) redis.Config {
 func NewListener(c *cli.Context) (*listener.Listener, error) {
 	l := zap.S()
 
+	httpClient := &http.Client{
+		Timeout: defaultRequestTimeout,
+	}
+
 	wsRPC := c.String(wsRPCFlag.Name)
-	wsEVMClient, err := evmclient.DialContext(context.Background(), wsRPC)
+	wsEVMClient, err := evmclient.DialContext(context.Background(), wsRPC, httpClient)
 	if err != nil {
 		l.Errorw("Fail to connect to node", "rpc", wsRPC, "error", err)
 
@@ -54,7 +64,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	}
 
 	httpRPC := c.String(httpRPCFlag.Name)
-	httpEVMClient, err := evmclient.DialContext(context.Background(), httpRPC)
+	httpEVMClient, err := evmclient.DialContext(context.Background(), httpRPC, httpClient)
 	if err != nil {
 		l.Errorw("Fail to connect to node", "rpc", httpRPC, "error", err)
 
@@ -74,7 +84,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	var sanityEVMClient evmclient.IClient
 	sanityRPC := c.String(sanityNodeRPCFlag.Name)
 	if sanityRPC != "" {
-		sanityEVMClient, err = evmclient.DialContext(context.Background(), sanityRPC)
+		sanityEVMClient, err = evmclient.DialContext(context.Background(), sanityRPC, httpClient)
 		if err != nil {
 			l.Errorw("Fail to setup EVM client for sanity check", "error", err)
 

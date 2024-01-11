@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/big"
 	"net/http"
-	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/common"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient/ftmclient"
@@ -21,10 +20,9 @@ import (
 )
 
 const (
-	chainIDFantom         = 250
-	chainIDAvalanche      = 43114
-	chainIDZKSync         = 324
-	defaultRequestTimeout = 10 * time.Second
+	chainIDFantom    = 250
+	chainIDAvalanche = 43114
+	chainIDZKSync    = 324
 )
 
 type FilterQuery struct {
@@ -63,15 +61,11 @@ type Client struct {
 	zksyncClient *zksyncclient.Client
 }
 
-func Dial(rawurl string) (*Client, error) {
-	return DialContext(context.Background(), rawurl)
+func Dial(rawurl string, httpClient *http.Client) (*Client, error) {
+	return DialContext(context.Background(), rawurl, httpClient)
 }
 
-func DialContext(ctx context.Context, rawurl string) (*Client, error) {
-	httpClient := &http.Client{
-		Timeout: defaultRequestTimeout,
-	}
-
+func DialContext(ctx context.Context, rawurl string, httpClient *http.Client) (*Client, error) {
 	rpcClient, err := rpc.DialOptions(ctx, rawurl, rpc.WithHTTPClient(httpClient))
 	if err != nil {
 		return nil, err
