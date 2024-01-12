@@ -243,8 +243,11 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 	ticker := time.NewTicker(l.sanityCheckInterval)
 	defer ticker.Stop()
 
-	lastReceivedTime := time.Now()
+	// Reset sliding window buffer.
 	seq := uint64(1)
+	l.queue.Clear()
+
+	lastReceivedTime := time.Now()
 	for {
 		select {
 		case <-ctx.Done():
