@@ -26,7 +26,7 @@ func NewQueue(maxSize int) *Queue {
 		panic("Invalid maxSize, should be at least 1")
 	}
 
-	queue := &Queue{maxSize: maxSize, seq: 1}
+	queue := &Queue{maxSize: maxSize}
 	queue.clear()
 
 	return queue
@@ -156,6 +156,7 @@ func (q *Queue) clear() {
 
 	q.start = 0
 	q.size = 0
+	q.seq = 1
 }
 
 // Clear removes all elements from the queue.
