@@ -447,7 +447,9 @@ func (l *Listener) startMetricsCollector(_ context.Context) error {
 func (l *Listener) sanityCheck(ctx context.Context, validSecond uint64) error {
 	header, err := getHeaderByNumber(ctx, l.sanityEVMClient, nil)
 	if err != nil {
-		return err
+		l.l.Errorw("Fail to get latest block", "error", err)
+
+		return nil
 	}
 
 	l.mu.Lock()
