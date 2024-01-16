@@ -107,8 +107,23 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxNumBlocks, blockExpiration)
 
 	topic := c.String(publisherTopicFlag.Name)
+	publisher, err := getPublisher(c, redisClient)
+	if err != nil {
+		l.Errorw("Fail to get publisher", "error", err)
+		return nil, err
+	}
 
+	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher,
+		listener.WithEventLogs(nil, nil))
+
+	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval,
+		listener.WithEventLogs(nil, nil)), nil
+}
+
+func getPublisher(c *cli.Context, redisClient *redis.Client) (publisherpkg.Publisher, error) {
 	var publisher publisherpkg.Publisher
+	var err error
+
 	publisherType := c.String(publisherTypeFlag.Name)
 	switch publisherType {
 	case publisherpkg.PublisherTypeKafka:
@@ -117,19 +132,12 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := kafka.ValidateTopicName(topic); err != nil {
-			return nil, err
-		}
 	default:
 		maxLen := c.Int64(publisherMaxLenFlag.Name)
 		publisher = redis.NewStream(redisClient, maxLen)
 	}
 
-	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher,
-		listener.WithEventLogs(nil, nil))
-
-	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval,
-		listener.WithEventLogs(nil, nil)), nil
+	return publisher, err
 }
 
 const (
