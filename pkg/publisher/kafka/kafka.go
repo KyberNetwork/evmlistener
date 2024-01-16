@@ -58,10 +58,10 @@ func (k *Publisher) Publish(ctx context.Context, topic string, data interface{})
 	return nil
 }
 
-// ValidationTopicName returns error if the string is invalid as Kafka topic name.
+// ValidateTopicName returns error if the string is invalid as Kafka topic name.
 // Due to limitations in metric names, topics with a period ('.') or underscore
 // ('_') could collide. To avoid issues it is best to use either, but not both.
-func ValidationTopicName(topic string) error {
+func ValidateTopicName(topic string) error {
 	legalChars := "[a-zA-Z0-9\\._\\-]"
 
 	_, err := regexp.MatchString(topic, legalChars)

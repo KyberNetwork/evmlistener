@@ -117,7 +117,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := kafka.ValidationTopicName(topic); err != nil {
+		if err := kafka.ValidateTopicName(topic); err != nil {
 			return nil, err
 		}
 	default:
