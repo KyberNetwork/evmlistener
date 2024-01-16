@@ -63,11 +63,14 @@ func (k *Publisher) Publish(ctx context.Context, topic string, data interface{})
 // NOTE: Due to limitations in metric names, topics with a period ('.') or underscore
 // ('_') could collide. To avoid issues it is best to use either, but not both.
 func ValidateTopicName(topic string) error {
-	legalChars := "[a-zA-Z0-9\\._\\-]"
-
-	_, err := regexp.MatchString(topic, legalChars)
+	expression := "^[a-zA-Z0-9\\._\\-]+$"
+	matched, err := regexp.MatchString(expression, topic)
 	if err != nil {
 		return err
+	}
+
+	if !matched {
+		return errors.New("invalid characters in topic name")
 	}
 
 	if strings.Contains(topic, "-") && strings.Contains(topic, ".") {
