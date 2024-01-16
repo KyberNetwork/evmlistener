@@ -17,9 +17,10 @@ type Publisher struct {
 func NewPublisher(config *Config) (*Publisher, error) {
 	c := sarama.NewConfig()
 
-	// Producer's MaxMessageBytes is currently compare to the size of un-compress
-	// message, while it should compare to compressed size. This causes error
-	// when publish some messages with large un-compress size > 1MB.
+	// Sarama Producer's MaxMessageBytes is currently compare to the size of
+	// un-compress message, while it should compare to compressed size.
+	// This causes error when publish some messages with large un-compress size,
+	// while the compressed size is smaller than Broker's config.
 	// However, this is just client-side safety check, remote Kafka cluster
 	// will check it again with correct compressed size.
 	// So, set MaxMessageBytes to MaxRequestSize for now.
@@ -59,7 +60,7 @@ func (k *Publisher) Publish(ctx context.Context, topic string, data interface{})
 }
 
 // ValidateTopicName returns error if the string is invalid as Kafka topic name.
-// Due to limitations in metric names, topics with a period ('.') or underscore
+// NOTE: Due to limitations in metric names, topics with a period ('.') or underscore
 // ('_') could collide. To avoid issues it is best to use either, but not both.
 func ValidateTopicName(topic string) error {
 	legalChars := "[a-zA-Z0-9\\._\\-]"

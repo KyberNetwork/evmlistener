@@ -107,9 +107,10 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxNumBlocks, blockExpiration)
 
 	topic := c.String(publisherTopicFlag.Name)
-	publisher, err := getPublisher(c, redisClient)
+	publisher, err := getPublisher(c, redisClient, topic)
 	if err != nil {
 		l.Errorw("Fail to get publisher", "error", err)
+
 		return nil, err
 	}
 
@@ -120,7 +121,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		listener.WithEventLogs(nil, nil)), nil
 }
 
-func getPublisher(c *cli.Context, redisClient *redis.Client) (publisherpkg.Publisher, error) {
+func getPublisher(c *cli.Context, redisClient *redis.Client, topic string) (publisherpkg.Publisher, error) {
 	var publisher publisherpkg.Publisher
 	var err error
 
@@ -130,6 +131,9 @@ func getPublisher(c *cli.Context, redisClient *redis.Client) (publisherpkg.Publi
 		addresses := c.StringSlice(kafkaAddrsFlag.Name)
 		publisher, err = kafka.NewPublisher(&kafka.Config{Addresses: addresses})
 		if err != nil {
+			return nil, err
+		}
+		if err := kafka.ValidateTopicName(topic); err != nil {
 			return nil, err
 		}
 	default:
