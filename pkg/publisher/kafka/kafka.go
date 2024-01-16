@@ -26,6 +26,7 @@ func NewPublisher(config *Config) (*Publisher, error) {
 	// Reference: https://github.com/IBM/sarama/issues/2142
 	c.Producer.MaxMessageBytes = int(sarama.MaxRequestSize)
 	c.Producer.Compression = sarama.CompressionLZ4
+	c.Producer.RequiredAcks = sarama.WaitForAll
 	c.Producer.Return.Successes = true
 	c.Producer.Return.Errors = true
 
