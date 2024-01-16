@@ -9,6 +9,8 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/listener"
+	publisherpkg "github.com/KyberNetwork/evmlistener/pkg/publisher"
+	"github.com/KyberNetwork/evmlistener/pkg/publisher/kafka"
 	"github.com/KyberNetwork/evmlistener/pkg/redis"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
@@ -104,11 +106,26 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	blockExpiration := c.Duration(blockExpirationFlag.Name)
 	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxNumBlocks, blockExpiration)
 
-	maxLen := c.Int64(publisherMaxLenFlag.Name)
-	redisStream := redis.NewStream(redisClient, maxLen)
-
 	topic := c.String(publisherTopicFlag.Name)
-	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, redisStream,
+
+	var publisher publisherpkg.Publisher
+	publisherType := c.String(publisherTypeFlag.Name)
+	switch publisherType {
+	case publisherpkg.PublisherTypeKafka:
+		addresses := c.StringSlice(kafkaAddrsFlag.Name)
+		publisher, err = kafka.NewPublisher(&kafka.Config{Addresses: addresses})
+		if err != nil {
+			return nil, err
+		}
+		if err := kafka.ValidationTopicName(topic); err != nil {
+			return nil, err
+		}
+	default:
+		maxLen := c.Int64(publisherMaxLenFlag.Name)
+		publisher = redis.NewStream(redisClient, maxLen)
+	}
+
+	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher,
 		listener.WithEventLogs(nil, nil))
 
 	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval,

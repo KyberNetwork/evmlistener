@@ -99,6 +99,20 @@ var (
 		Usage:   "Timeout for redis write operation",
 	}
 
+	kafkaAddrsFlag = &cli.StringSliceFlag{
+		Name:    "kafka-addrs",
+		EnvVars: []string{"KAFKA_ADDRS"},
+		Value:   cli.NewStringSlice("localhost:9092"),
+		Usage:   "A list of address for connecting to kafka. Default: localhost:9092",
+	}
+
+	publisherTypeFlag = &cli.StringFlag{
+		Name:     "publisher-type",
+		EnvVars:  []string{"PUBLISHER_TYPE"},
+		Value:    "",
+		Required: true,
+		Usage:    "Type of publisher. Supports: `kafka`, `redis-stream`",
+	}
 	publisherTopicFlag = &cli.StringFlag{
 		Name:     "publisher-topic",
 		EnvVars:  []string{"PUBLISHER_TOPIC"},
@@ -141,9 +155,14 @@ func NewRedisFlags() []cli.Flag {
 	}
 }
 
+// NewKafkaFlags returns flags for kafka.
+func NewKafkaFlags() []cli.Flag {
+	return []cli.Flag{kafkaAddrsFlag}
+}
+
 // NewPublisherFlags returns flags for publishers.
 func NewPublisherFlags() []cli.Flag {
-	return []cli.Flag{publisherMaxLenFlag, publisherTopicFlag}
+	return []cli.Flag{publisherTypeFlag, publisherMaxLenFlag, publisherTopicFlag}
 }
 
 // NewBlockKeeperFlags returns flags for block keeper.
@@ -162,6 +181,7 @@ func NewFlags() []cli.Flag {
 	}
 	flags = append(flags, NewSentryFlags()...)
 	flags = append(flags, NewRedisFlags()...)
+	flags = append(flags, NewKafkaFlags()...)
 	flags = append(flags, NewPublisherFlags()...)
 	flags = append(flags, NewBlockKeeperFlags()...)
 

@@ -6,6 +6,7 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
+	"github.com/KyberNetwork/evmlistener/pkg/publisher"
 	"github.com/KyberNetwork/evmlistener/pkg/pubsub"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"go.uber.org/zap"
@@ -17,7 +18,7 @@ type Handler struct {
 
 	evmClient   evmclient.IClient
 	blockKeeper block.Keeper
-	publisher   pubsub.Publisher
+	publisher   publisher.Publisher
 	l           *zap.SugaredLogger
 	option      *FilterOption
 }
