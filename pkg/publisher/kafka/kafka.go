@@ -57,11 +57,6 @@ func (k *Publisher) Publish(ctx context.Context, topic string, data interface{})
 	return nil
 }
 
-// TODO: Call cleanup producer
-func (k *Publisher) Cleanup() error {
-	return k.producer.Close()
-}
-
 // ValidationTopicName returns error if the string is invalid as Kafka topic name.
 // Due to limitations in metric names, topics with a period ('.') or underscore
 // ('_') could collide. To avoid issues it is best to use either, but not both.
