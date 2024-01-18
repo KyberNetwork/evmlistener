@@ -51,3 +51,8 @@ Run service:
 source listener.env
 go run ./cmd/listener/main.go
 ```
+
+Generate proto files:
+```
+protoc --proto_path protobuf --go_out protobuf protobuf/message.proto protobuf/ethereum.proto
+```
