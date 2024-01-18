@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/IBM/sarama"
+	"github.com/KyberNetwork/evmlistener/pkg/types"
 )
 
 type Publisher struct {
@@ -41,20 +42,23 @@ func NewPublisher(config *Config) (*Publisher, error) {
 }
 
 func (k *Publisher) Publish(ctx context.Context, topic string, data interface{}) error {
-	encodedData, err := json.Marshal(data)
+	evmMessage := data.(types.Message)
+
+	// JSON encode and publish messages
+	jsonEncodedData, err := json.Marshal(evmMessage)
 	if err != nil {
 		return err
 	}
-
-	message := &sarama.ProducerMessage{
+	jsonEncodedMessage := &sarama.ProducerMessage{
 		Topic: topic,
-		Value: sarama.ByteEncoder(encodedData),
+		Value: sarama.ByteEncoder(jsonEncodedData),
 	}
-
-	_, _, err = k.producer.SendMessage(message)
+	_, _, err = k.producer.SendMessage(jsonEncodedMessage)
 	if err != nil {
 		return err
 	}
+
+	// Protobuf encode and publish messages
 
 	return nil
 }
