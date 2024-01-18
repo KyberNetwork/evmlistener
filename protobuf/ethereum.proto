@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package ethereum;
+
+option go_package = "./pb";
+
+message Block {
+  uint64 number = 1;
+  string hash = 2;
+  uint64 timestamp = 3;
+  string parent_hash = 4;
+  string reorged_hash = 5;
+  repeated Log logs = 6;
+}
+
+message Log {
+  string address = 1;
+  repeated string topics = 2;
+  bytes data = 3;
+  string block_hash = 4;
+  uint64 block_number = 5;
+  string tx_hash = 6;
+  uint32 tx_index = 7;
+  uint32 log_index = 8;
+  bool removed = 9;
+}
