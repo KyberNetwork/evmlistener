@@ -54,7 +54,6 @@ func (k *Publisher) Publish(ctx context.Context, topic string, data interface{})
 	// JSON encode and publish messages
 	start := time.Now()
 	jsonEncodedData, err := json.Marshal(evmMessage)
-	k.jsonEncodeTime += time.Since(start)
 	if err != nil {
 		return err
 	}
@@ -62,6 +61,7 @@ func (k *Publisher) Publish(ctx context.Context, topic string, data interface{})
 		Topic: topic,
 		Value: sarama.ByteEncoder(jsonEncodedData),
 	}
+	k.jsonEncodeTime += time.Since(start)
 	_, _, err = k.producer.SendMessage(jsonEncodedMessage)
 	if err != nil {
 		return err
@@ -71,7 +71,6 @@ func (k *Publisher) Publish(ctx context.Context, topic string, data interface{})
 	start = time.Now()
 	protobufMessage := evmMessage.ToProtobuf()
 	protobufEncodedData, err := proto.Marshal(protobufMessage)
-	k.protobufEncodeTime += time.Since(start)
 	if err != nil {
 		return err
 	}
@@ -79,6 +78,7 @@ func (k *Publisher) Publish(ctx context.Context, topic string, data interface{})
 		Topic: topic + ".protobuf",
 		Value: sarama.ByteEncoder(protobufEncodedData),
 	}
+	k.protobufEncodeTime += time.Since(start)
 	_, _, err = k.producer.SendMessage(protobufEncodedMessage)
 	if err != nil {
 		return err
