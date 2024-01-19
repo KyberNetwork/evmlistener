@@ -53,7 +53,7 @@ func (ts *StreamTestSuite) TestPublish() {
 	}
 
 	for _, test := range tests {
-		err := ts.s.Publish(context.Background(), topic, test.msg)
+		err := ts.s.Publish(context.Background(), topic, []byte(test.msg))
 		ts.Require().NoError(err)
 
 		res, err := ts.s.client.XRevRangeN(context.Background(), topic, "+", "-", 1).Result()

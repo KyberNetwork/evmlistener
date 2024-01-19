@@ -42,7 +42,7 @@ func TestPublishMessage(t *testing.T) {
 	}
 
 	assert.NoError(t, err)
-	assert.NoError(t, publisher.Publish(context.Background(), topic, "hello"))
+	assert.NoError(t, publisher.Publish(context.Background(), topic, []byte("hello")))
 
 	seedBroker.Close()
 	leader.Close()

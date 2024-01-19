@@ -2,7 +2,6 @@ package kafka
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"regexp"
 	"strings"
@@ -40,19 +39,13 @@ func NewPublisher(config *Config) (*Publisher, error) {
 	return &Publisher{producer: producer}, nil
 }
 
-func (k *Publisher) Publish(ctx context.Context, topic string, data interface{}) error {
-	encodedData, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
+func (k *Publisher) Publish(ctx context.Context, topic string, data []byte) error {
 	message := &sarama.ProducerMessage{
 		Topic: topic,
-		Value: sarama.ByteEncoder(encodedData),
+		Value: sarama.ByteEncoder(data),
 	}
 
-	_, _, err = k.producer.SendMessage(message)
-	if err != nil {
+	if _, _, err := k.producer.SendMessage(message); err != nil {
 		return err
 	}
 

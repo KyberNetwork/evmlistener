@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"math/big"
 )
 
@@ -26,4 +27,10 @@ type Block struct {
 type Message struct {
 	RevertedBlocks []Block `json:"revertedBlocks"`
 	NewBlocks      []Block `json:"newBlocks"`
+}
+
+func (m *Message) Encode() []byte {
+	// TODO: Proper error handling
+	data, _ := json.Marshal(m)
+	return data
 }

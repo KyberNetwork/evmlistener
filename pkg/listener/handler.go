@@ -7,7 +7,6 @@ import (
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/publisher"
-	"github.com/KyberNetwork/evmlistener/pkg/pubsub"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"go.uber.org/zap"
 )
@@ -26,7 +25,7 @@ type Handler struct {
 // NewHandler ...
 func NewHandler(
 	l *zap.SugaredLogger, topic string, evmClient evmclient.IClient,
-	blockKeeper block.Keeper, publisher pubsub.Publisher, options ...Option,
+	blockKeeper block.Keeper, publisher publisher.Publisher, options ...Option,
 ) *Handler {
 	var opts FilterOption
 	for _, v := range options {
@@ -237,7 +236,7 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 		RevertedBlocks: revertedBlocks,
 		NewBlocks:      newBlocks,
 	}
-	err = h.publisher.Publish(ctx, h.topic, msg)
+	err = h.publisher.Publish(ctx, h.topic, msg.Encode())
 	if err != nil {
 		log.Errorw("Fail to publish message", "error", err)
 
