@@ -2,6 +2,8 @@ package types
 
 import (
 	"math/big"
+
+	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 )
 
 // Header contains block header information.
@@ -22,8 +24,39 @@ type Block struct {
 	Logs        []Log    `json:"logs"`
 }
 
+func (b *Block) ToProtobuf() *pb.Block {
+	logs := make([]*pb.Log, len(b.Logs))
+	for i, l := range b.Logs {
+		logs[i] = l.ToProtobuf()
+	}
+
+	return &pb.Block{
+		Number:      b.Number.Uint64(),
+		Hash:        b.Hash,
+		Timestamp:   b.Timestamp,
+		ParentHash:  b.ParentHash,
+		ReorgedHash: b.ReorgedHash,
+		Logs:        logs,
+	}
+}
+
 // Message ...
 type Message struct {
 	RevertedBlocks []Block `json:"revertedBlocks"`
 	NewBlocks      []Block `json:"newBlocks"`
+}
+
+func (m *Message) ToProtobuf() *pb.Message {
+	revertedBlocks := make([]*pb.Block, len(m.RevertedBlocks))
+	for i, b := range m.RevertedBlocks {
+		revertedBlocks[i] = b.ToProtobuf()
+	}
+	newBlocks := make([]*pb.Block, len(m.NewBlocks))
+	for i, b := range m.NewBlocks {
+		newBlocks[i] = b.ToProtobuf()
+	}
+	return &pb.Message{
+		RevertedBlocks: revertedBlocks,
+		NewBlocks:      newBlocks,
+	}
 }

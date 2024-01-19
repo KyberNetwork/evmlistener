@@ -4,15 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/IBM/sarama"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
+	"google.golang.org/protobuf/proto"
 )
 
 type Publisher struct {
-	producer sarama.SyncProducer
+	producer           sarama.SyncProducer
+	totalMessage       uint32
+	jsonEncodeTime     time.Duration
+	protobufEncodeTime time.Duration
 }
 
 func NewPublisher(config *Config) (*Publisher, error) {
@@ -42,10 +48,13 @@ func NewPublisher(config *Config) (*Publisher, error) {
 }
 
 func (k *Publisher) Publish(ctx context.Context, topic string, data interface{}) error {
+	k.totalMessage += 1
 	evmMessage := data.(types.Message)
 
 	// JSON encode and publish messages
+	start := time.Now()
 	jsonEncodedData, err := json.Marshal(evmMessage)
+	k.jsonEncodeTime += time.Since(start)
 	if err != nil {
 		return err
 	}
@@ -59,6 +68,24 @@ func (k *Publisher) Publish(ctx context.Context, topic string, data interface{})
 	}
 
 	// Protobuf encode and publish messages
+	start = time.Now()
+	protobufMessage := evmMessage.ToProtobuf()
+	protobufEncodedData, err := proto.Marshal(protobufMessage)
+	k.protobufEncodeTime += time.Since(start)
+	if err != nil {
+		return err
+	}
+	protobufEncodedMessage := &sarama.ProducerMessage{
+		Topic: topic + ".protobuf",
+		Value: sarama.ByteEncoder(protobufEncodedData),
+	}
+	_, _, err = k.producer.SendMessage(protobufEncodedMessage)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("JSON Encode", k.jsonEncodeTime, k.jsonEncodeTime/time.Duration(k.totalMessage))
+	fmt.Println("Protobuf Encode", k.protobufEncodeTime, k.protobufEncodeTime/time.Duration(k.totalMessage))
 
 	return nil
 }
