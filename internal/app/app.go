@@ -146,9 +146,14 @@ func getPublisher(c *cli.Context, redisClient *redis.Client, topic string) (publ
 	return publisher, err
 }
 
-func getMessageEncoder(_ *cli.Context) encoder.Encoder {
-	// Always return JSON Encoder for now
-	return encoder.NewJSONEncoder()
+func getMessageEncoder(c *cli.Context) encoder.Encoder {
+	publisherType := c.String(publisherTypeFlag.Name)
+	switch publisherType {
+	case publisherpkg.PublisherTypeKafka:
+		return encoder.NewProtobufEncoder()
+	default:
+		return encoder.NewJSONEncoder()
+	}
 }
 
 const (

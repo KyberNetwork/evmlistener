@@ -22,7 +22,7 @@ type Log struct {
 	Removed     bool     `json:"removed"`
 }
 
-func (l *Log) ToProtobuf() *pb.Log {
+func (l Log) ToProtobuf() *pb.Log {
 	return &pb.Log{
 		Address:     common.FromHex(l.Address),
 		Topics:      l.Topics,

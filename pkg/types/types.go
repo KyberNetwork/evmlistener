@@ -25,7 +25,7 @@ type Block struct {
 	Logs        []Log    `json:"logs"`
 }
 
-func (b *Block) ToProtobuf() *pb.Block {
+func (b Block) ToProtobuf() *pb.Block {
 	logs := make([]*pb.Log, len(b.Logs))
 	for i, l := range b.Logs {
 		logs[i] = l.ToProtobuf()
@@ -47,7 +47,7 @@ type Message struct {
 	NewBlocks      []Block `json:"newBlocks"`
 }
 
-func (m *Message) ToProtobuf() *pb.Message {
+func (m Message) ToProtobuf() *pb.Message {
 	revertedBlocks := make([]*pb.Block, len(m.RevertedBlocks))
 	for i, b := range m.RevertedBlocks {
 		revertedBlocks[i] = b.ToProtobuf()
