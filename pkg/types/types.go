@@ -1,7 +1,6 @@
 package types
 
 import (
-	"encoding/json"
 	"math/big"
 
 	"github.com/KyberNetwork/evmlistener/protobuf/pb"
@@ -46,13 +45,6 @@ func (b *Block) ToProtobuf() *pb.Block {
 type Message struct {
 	RevertedBlocks []Block `json:"revertedBlocks"`
 	NewBlocks      []Block `json:"newBlocks"`
-}
-
-func (m *Message) Encode() []byte {
-	// TODO: Proper error handling
-	data, _ := json.Marshal(m)
-
-	return data
 }
 
 func (m *Message) ToProtobuf() *pb.Message {

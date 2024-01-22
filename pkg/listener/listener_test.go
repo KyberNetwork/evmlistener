@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/block"
+	"github.com/KyberNetwork/evmlistener/pkg/encoder"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -15,6 +16,7 @@ type ListenerTestSuite struct {
 	suite.Suite
 	evmClient *EVMClientMock
 	publisher *PublisherMock
+	encoder   encoder.Encoder
 	listener  *Listener
 }
 
@@ -32,8 +34,9 @@ func (ts *ListenerTestSuite) SetupTest() {
 
 	ts.evmClient = evmClient
 	ts.publisher = NewPublisherMock(1000)
+	ts.encoder = encoder.NewJSONEncoder()
 	blockKeeper := block.NewBaseBlockKeeper(32)
-	handler := NewHandler(zap.S(), "test-topic", ts.evmClient, blockKeeper, ts.publisher)
+	handler := NewHandler(zap.S(), "test-topic", ts.evmClient, blockKeeper, ts.publisher, ts.encoder)
 	ts.listener = New(zap.S(), evmClient, evmClient, handler, nil, 0)
 }
 

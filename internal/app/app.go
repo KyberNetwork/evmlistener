@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/block"
+	"github.com/KyberNetwork/evmlistener/pkg/encoder"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/listener"
 	publisherpkg "github.com/KyberNetwork/evmlistener/pkg/publisher"
@@ -113,8 +114,9 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 
 		return nil, err
 	}
+	encoder := getMessageEncoder(c)
 
-	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher,
+	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher, encoder,
 		listener.WithEventLogs(nil, nil))
 
 	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval,
@@ -142,6 +144,11 @@ func getPublisher(c *cli.Context, redisClient *redis.Client, topic string) (publ
 	}
 
 	return publisher, err
+}
+
+func getMessageEncoder(_ *cli.Context) encoder.Encoder {
+	// Always return JSON Encoder for now
+	return encoder.NewJSONEncoder()
 }
 
 const (
