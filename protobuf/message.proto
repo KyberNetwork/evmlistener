@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package message;
+
+option go_package = "./pb";
+
+import "protobuf/ethereum.proto";
+
+message Message {
+    // List of new blocks. Normally have size 1 if no re-org happened.
+    repeated ethereum.Block new_blocks = 1;
+    // List of old blocks that are re-org.
+    repeated ethereum.Block reverted_blocks = 2;
+}

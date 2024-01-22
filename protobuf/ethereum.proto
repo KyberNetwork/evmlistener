@@ -1,0 +1,29 @@
+// This proto file is reference to https://github.com/streamingfast/firehose-ethereum/blob/develop/proto/sf/ethereum/type/v2/type.proto,
+// with changing in fields to apply with custom business of EVM Listener.
+
+syntax = "proto3";
+
+package ethereum;
+
+option go_package = "./pb";
+
+message Block {
+  uint64 number = 1;
+  bytes hash = 2;
+  bytes parent_hash = 3;
+  bytes reorged_hash = 4;
+  uint64 timestamp = 5;
+  repeated Log logs = 6;
+}
+
+message Log {
+  bytes address = 1;
+  repeated string topics = 2;
+  bytes data = 3;
+  bytes block_hash = 4;
+  uint64 block_number = 5;
+  bytes tx_hash = 6;
+  uint32 tx_index = 7;
+  uint32 log_index = 8;
+  bool removed = 9;
+}
