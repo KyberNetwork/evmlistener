@@ -1,4 +1,4 @@
-name: Go Project CI
+name: Go Project CI (Kafka)
 
 concurrency:
   group: ci-workflow-${{ github.ref }}-${{ github.event_name }}
@@ -11,6 +11,7 @@ on:
       - main
       - release
       - ci
+      - main-kafka
   pull_request:
     branches:
       - "*"
@@ -112,6 +113,7 @@ jobs:
       contains('
         refs/heads/main
         refs/heads/release
+        refs/heads/main-kafka
       ', github.ref)
     runs-on: [ubuntu-22.04]
     needs:
