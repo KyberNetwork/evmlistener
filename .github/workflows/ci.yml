@@ -1,4 +1,4 @@
-name: Go Project CI
+name: Go Project CI (Kafka)
 
 concurrency:
   group: ci-workflow-${{ github.ref }}-${{ github.event_name }}
@@ -11,6 +11,7 @@ on:
       - main
       - release-v**
       - ci
+      - main-kafka
   pull_request:
     branches:
       - "*"
