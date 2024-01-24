@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/KyberNetwork/evmlistener/protobuf/pb"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -18,6 +20,20 @@ type Log struct {
 	BlockHash   string   `json:"blockHash"`
 	Index       uint     `json:"logIndex"`
 	Removed     bool     `json:"removed"`
+}
+
+func (l Log) ToProtobuf() *pb.Log {
+	return &pb.Log{
+		Address:     common.FromHex(l.Address),
+		Topics:      l.Topics,
+		Data:        l.Data,
+		BlockNumber: l.BlockNumber,
+		BlockHash:   common.FromHex(l.BlockHash),
+		TxHash:      common.FromHex(l.TxHash),
+		TxIndex:     uint32(l.TxIndex),
+		LogIndex:    uint32(l.Index),
+		Removed:     l.Removed,
+	}
 }
 
 // MarshalJSON marshals as JSON.
