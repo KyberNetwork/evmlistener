@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/KyberNetwork/evmlistener/pkg/encoder"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -52,8 +53,12 @@ func (ts *StreamTestSuite) TestPublish() {
 		},
 	}
 
+	encoder := encoder.NewJSONEncoder()
 	for _, test := range tests {
-		err := ts.s.Publish(context.Background(), topic, test.msg)
+		encodedMsg, err := encoder.Encode(test.msg)
+		ts.Require().NoError(err)
+
+		err = ts.s.Publish(context.Background(), topic, encodedMsg)
 		ts.Require().NoError(err)
 
 		res, err := ts.s.client.XRevRangeN(context.Background(), topic, "+", "-", 1).Result()
