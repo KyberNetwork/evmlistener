@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/KyberNetwork/evmlistener/pkg/block"
+	"github.com/KyberNetwork/evmlistener/pkg/encoder"
 	ltypes "github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -16,6 +17,7 @@ type HandlerTestSuite struct {
 	evmClient   *EVMClientMock
 	blockKeeper block.Keeper
 	publisher   *PublisherMock
+	encoder     encoder.Encoder
 }
 
 func (ts *HandlerTestSuite) SetupTest() {
@@ -33,13 +35,14 @@ func (ts *HandlerTestSuite) SetupTest() {
 	ts.evmClient = evmClient
 	ts.blockKeeper = block.NewBaseBlockKeeper(32)
 	ts.publisher = NewPublisherMock(1000)
-	ts.handler = NewHandler(zap.S(), "test-topic", ts.evmClient, ts.blockKeeper, ts.publisher)
+	ts.encoder = encoder.NewJSONEncoder()
+	ts.handler = NewHandler(zap.S(), "test-topic", ts.evmClient, ts.blockKeeper, ts.publisher, ts.encoder)
 }
 
 func (ts *HandlerTestSuite) TestInit() {
 	ts.evmClient.SetHead(34)
 	blockKeeper := NewBlockKeeperMock(32)
-	handler := NewHandler(zap.S(), "test-topic", ts.evmClient, blockKeeper, ts.publisher)
+	handler := NewHandler(zap.S(), "test-topic", ts.evmClient, blockKeeper, ts.publisher, ts.encoder)
 
 	// Init handler without saved data.
 	err := handler.Init(context.Background())
@@ -83,8 +86,9 @@ func (ts *HandlerTestSuite) TestHandle() {
 	ts.Require().NoError(err)
 	ts.Require().Equal(1, len(ts.publisher.ch))
 	data := <-ts.publisher.ch
-	msg, ok := data.(ltypes.Message)
-	ts.Require().True(ok)
+	var msg ltypes.Message
+	err = ts.encoder.Decode(data.([]byte), &msg)
+	ts.Require().NoError(err)
 	ts.Require().Equal(0, len(msg.RevertedBlocks))
 	ts.Require().Equal(1, len(msg.NewBlocks))
 	ts.Assert().Equal(b.Hash, msg.NewBlocks[0].Hash)
@@ -100,8 +104,8 @@ func (ts *HandlerTestSuite) TestHandle() {
 	ts.Require().NoError(err)
 	ts.Require().Equal(1, len(ts.publisher.ch))
 	data = <-ts.publisher.ch
-	msg, ok = data.(ltypes.Message)
-	ts.Require().True(ok)
+	err = ts.encoder.Decode(data.([]byte), &msg)
+	ts.Require().NoError(err)
 	ts.Require().Equal(0, len(msg.RevertedBlocks))
 	ts.Require().Equal(7, len(msg.NewBlocks))
 	ts.Assert().Equal(b.Hash, msg.NewBlocks[6].Hash)
@@ -120,8 +124,8 @@ func (ts *HandlerTestSuite) TestHandle() {
 	ts.Require().NoError(err)
 	ts.Require().Equal(1, len(ts.publisher.ch))
 	data = <-ts.publisher.ch
-	msg, ok = data.(ltypes.Message)
-	ts.Require().True(ok)
+	err = ts.encoder.Decode(data.([]byte), &msg)
+	ts.Require().NoError(err)
 	ts.Require().Equal(1, len(msg.RevertedBlocks))
 	ts.Require().Equal(1, len(msg.NewBlocks))
 	ts.Assert().Equal(head.Hash, msg.RevertedBlocks[0].Hash)
@@ -147,8 +151,8 @@ func (ts *HandlerTestSuite) TestHandle() {
 	ts.Require().NoError(err)
 	ts.Require().Equal(1, len(ts.publisher.ch))
 	data = <-ts.publisher.ch
-	msg, ok = data.(ltypes.Message)
-	ts.Require().True(ok)
+	err = ts.encoder.Decode(data.([]byte), &msg)
+	ts.Require().NoError(err)
 	ts.Require().Equal(2, len(msg.RevertedBlocks))
 	ts.Require().Equal(2, len(msg.NewBlocks))
 	ts.Assert().Equal(head.Hash, msg.RevertedBlocks[0].Hash)

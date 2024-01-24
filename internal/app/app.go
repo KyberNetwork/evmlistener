@@ -7,8 +7,11 @@ import (
 	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/block"
+	"github.com/KyberNetwork/evmlistener/pkg/encoder"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/listener"
+	publisherpkg "github.com/KyberNetwork/evmlistener/pkg/publisher"
+	"github.com/KyberNetwork/evmlistener/pkg/publisher/kafka"
 	"github.com/KyberNetwork/evmlistener/pkg/redis"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
@@ -104,15 +107,53 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	blockExpiration := c.Duration(blockExpirationFlag.Name)
 	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxNumBlocks, blockExpiration)
 
-	maxLen := c.Int64(publisherMaxLenFlag.Name)
-	redisStream := redis.NewStream(redisClient, maxLen)
-
 	topic := c.String(publisherTopicFlag.Name)
-	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, redisStream,
+	publisher, err := getPublisher(c, redisClient, topic)
+	if err != nil {
+		l.Errorw("Fail to get publisher", "error", err)
+
+		return nil, err
+	}
+	encoder := getMessageEncoder(c)
+
+	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher, encoder,
 		listener.WithEventLogs(nil, nil))
 
 	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval,
 		listener.WithEventLogs(nil, nil)), nil
+}
+
+func getPublisher(c *cli.Context, redisClient *redis.Client, topic string) (publisherpkg.Publisher, error) {
+	var publisher publisherpkg.Publisher
+	var err error
+
+	publisherType := c.String(publisherTypeFlag.Name)
+	switch publisherType {
+	case publisherpkg.PublisherTypeKafka:
+		addresses := c.StringSlice(kafkaAddrsFlag.Name)
+		publisher, err = kafka.NewPublisher(&kafka.Config{Addresses: addresses})
+		if err != nil {
+			return nil, err
+		}
+		if err := kafka.ValidateTopicName(topic); err != nil {
+			return nil, err
+		}
+	default:
+		maxLen := c.Int64(publisherMaxLenFlag.Name)
+		publisher = redis.NewStream(redisClient, maxLen)
+	}
+
+	return publisher, err
+}
+
+func getMessageEncoder(c *cli.Context) encoder.Encoder {
+	encoderType := c.String(encoderTypeFlag.Name)
+	switch encoderType {
+	case encoder.EncoderTypeProtobuf:
+		return encoder.NewProtobufEncoder()
+	default:
+		return encoder.NewJSONEncoder()
+	}
 }
 
 const (

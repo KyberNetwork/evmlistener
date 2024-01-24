@@ -26,12 +26,7 @@ func NewStream(client *Client, maxLen int64) *Stream {
 }
 
 // Publish publishs a message to given topic.
-func (s *Stream) Publish(ctx context.Context, topic string, msg interface{}) error {
-	data, err := Encode(msg)
-	if err != nil {
-		return err
-	}
-
+func (s *Stream) Publish(ctx context.Context, topic string, data []byte) error {
 	return s.client.XAdd(ctx, &redis.XAddArgs{
 		Stream: topic,
 		MaxLen: s.maxLen,
