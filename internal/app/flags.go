@@ -105,6 +105,24 @@ var (
 		Value:   cli.NewStringSlice("localhost:9092"),
 		Usage:   "A list of address for connecting to kafka. Default: localhost:9092",
 	}
+	kafkaUseAuthenticationFlag = &cli.BoolFlag{
+		Name:    "kafka-use-authentication",
+		EnvVars: []string{"KAFKA_USE_AUTHENTICATION"},
+		Value:   false,
+		Usage:   "Whether or not to use authentication when connecting to the broker",
+	}
+	kafkaUsernameFlag = &cli.StringFlag{
+		Name:    "kafka-username",
+		EnvVars: []string{"KAFKA_USERNAME"},
+		Value:   "",
+		Usage:   "Username for authenticating with kafka brokers",
+	}
+	kafkaPasswordFlag = &cli.StringFlag{
+		Name:    "kafka-password",
+		EnvVars: []string{"KAFKA_PASSWORD"},
+		Value:   "",
+		Usage:   "Password for authenticating with kafka brokers",
+	}
 
 	encoderTypeFlag = &cli.StringFlag{
 		Name:     "encoder-type",
@@ -165,7 +183,12 @@ func NewRedisFlags() []cli.Flag {
 
 // NewKafkaFlags returns flags for kafka.
 func NewKafkaFlags() []cli.Flag {
-	return []cli.Flag{kafkaAddrsFlag}
+	return []cli.Flag{
+		kafkaAddrsFlag,
+		kafkaUseAuthenticationFlag,
+		kafkaUsernameFlag,
+		kafkaPasswordFlag,
+	}
 }
 
 // NewEncoderFlags returns flags for encoder.
