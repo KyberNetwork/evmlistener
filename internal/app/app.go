@@ -143,8 +143,13 @@ func getPublisher(c *cli.Context, redisClient *redis.Client, topic string) (publ
 	publisherType := c.String(publisherTypeFlag.Name)
 	switch publisherType {
 	case publisherpkg.PublisherTypeKafka:
-		addresses := c.StringSlice(kafkaAddrsFlag.Name)
-		publisher, err = kafka.NewPublisher(&kafka.Config{Addresses: addresses})
+		config := &kafka.Config{
+			Addresses:         c.StringSlice(kafkaAddrsFlag.Name),
+			UseAuthentication: c.Bool(kafkaUseAuthenticationFlag.Name),
+			Username:          c.String(kafkaUsernameFlag.Name),
+			Password:          c.String(kafkaPasswordFlag.Name),
+		}
+		publisher, err = kafka.NewPublisher(config)
 		if err != nil {
 			return nil, err
 		}
