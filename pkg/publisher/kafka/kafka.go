@@ -30,6 +30,10 @@ func NewPublisher(config *Config) (*Publisher, error) {
 	c.Producer.Return.Successes = true
 	c.Producer.Return.Errors = true
 
+	c.Net.SASL.Enable = config.UseAuthentication
+	c.Net.SASL.User = config.Username
+	c.Net.SASL.Password = config.Password
+
 	// Use SyncProducer since we want to ensure the message is published.
 	producer, err := sarama.NewSyncProducer(config.Addresses, c)
 	if err != nil {
