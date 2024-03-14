@@ -109,7 +109,7 @@ jobs:
 
   build:
     if:
-      ${{ contains('refs/heads/main', github.ref) || contains('refs/heads/release', github.ref) }}
+      ${{ contains(github.ref, 'refs/heads/main') || contains(github.ref, 'refs/heads/release') }}
     runs-on: [ubuntu-22.04]
     needs:
       - prepare
