@@ -9,7 +9,7 @@ on:
   push:
     branches:
       - main
-      - release
+      - release-v**
       - ci
   pull_request:
     branches:
@@ -109,10 +109,7 @@ jobs:
 
   build:
     if:
-      contains('
-        refs/heads/main
-        refs/heads/release
-      ', github.ref)
+      ${{ contains(github.ref, 'refs/heads/main') || contains(github.ref, 'refs/heads/release') }}
     runs-on: [ubuntu-22.04]
     needs:
       - prepare

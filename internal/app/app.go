@@ -54,8 +54,8 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	httpClient := &http.Client{
 		Timeout: defaultRequestTimeout,
 	}
-
 	wsRPC := c.String(wsRPCFlag.Name)
+	l.Infow("Connect to node websocket rpc", "rpc", wsRPC)
 	wsEVMClient, err := evmclient.DialContext(context.Background(), wsRPC, httpClient)
 	if err != nil {
 		l.Errorw("Fail to connect to node", "rpc", wsRPC, "error", err)
@@ -64,6 +64,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	}
 
 	httpRPC := c.String(httpRPCFlag.Name)
+	l.Infow("Connect to node http rpc", "rpc", httpRPC)
 	httpEVMClient, err := evmclient.DialContext(context.Background(), httpRPC, httpClient)
 	if err != nil {
 		l.Errorw("Fail to connect to node", "rpc", httpRPC, "error", err)
@@ -71,6 +72,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		return nil, err
 	}
 
+	l.Infow("Get chainID from node")
 	chainID, err := httpEVMClient.ChainID(context.Background())
 	if err != nil {
 		l.Errorw("Fail to get chainID", "error", err)
@@ -84,6 +86,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	var sanityEVMClient evmclient.IClient
 	sanityRPC := c.String(sanityNodeRPCFlag.Name)
 	if sanityRPC != "" {
+		l.Infow("Connect to public node rpc for sanity check", "rpc", sanityRPC)
 		sanityEVMClient, err = evmclient.DialContext(context.Background(), sanityRPC, httpClient)
 		if err != nil {
 			l.Errorw("Fail to setup EVM client for sanity check", "error", err)
@@ -93,23 +96,32 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	}
 
 	redisConfig := redisConfigFromCli(c)
+	redisConfigForLog := redisConfig
+	redisConfigForLog.SentinelPassword = "***"
+	redisConfigForLog.Password = "***"
+	l.Infow("Connect to redis", "cfg", redisConfigForLog)
 	redisClient, err := redis.New(redisConfig)
 	if err != nil {
-		l.Errorw("Fail to connect to redis", "cfg", redisConfig, "error", err)
+		l.Errorw("Fail to connect to redis", "cfg", redisConfigForLog, "error", err)
 
 		return nil, err
 	}
 
 	maxNumBlocks := c.Int(maxNumBlocksFlag.Name)
 	blockExpiration := c.Duration(blockExpirationFlag.Name)
+	l.Infow("Setup new BlockKeeper", "maxNumBlocks", maxNumBlocks, "expiration", blockExpiration)
 	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxNumBlocks, blockExpiration)
 
 	maxLen := c.Int64(publisherMaxLenFlag.Name)
+	l.Infow("Setup redis stream", "maxLen", maxLen)
 	redisStream := redis.NewStream(redisClient, maxLen)
 
 	topic := c.String(publisherTopicFlag.Name)
+	l.Infow("Setup handler", "topic", topic)
 	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, redisStream,
 		listener.WithEventLogs(nil, nil))
+
+	l.Infow("Setup listener")
 
 	return listener.New(l, wsEVMClient, httpEVMClient, handler, sanityEVMClient, sanityCheckInterval,
 		listener.WithEventLogs(nil, nil)), nil
