@@ -39,13 +39,8 @@ func redisConfigFromCli(c *cli.Context) redis.Config {
 		WriteTimeout: c.Duration(redisWriteTimeoutFlag.Name),
 	}
 
-	if cfg.MasterName != "" {
-		cfg.SentinelUsername = c.String(redisUsernameFlag.Name)
-		cfg.SentinelPassword = c.String(redisPasswordFlag.Name)
-	} else {
-		cfg.Username = c.String(redisUsernameFlag.Name)
-		cfg.Password = c.String(redisPasswordFlag.Name)
-	}
+	cfg.Username = c.String(redisUsernameFlag.Name)
+	cfg.Password = c.String(redisPasswordFlag.Name)
 
 	return cfg
 }
