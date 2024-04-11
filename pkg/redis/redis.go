@@ -11,16 +11,14 @@ import (
 
 // Config ...
 type Config struct {
-	MasterName       string
-	Addrs            []string
-	DB               int
-	Username         string
-	Password         string
-	SentinelUsername string
-	SentinelPassword string
-	KeyPrefix        string
-	ReadTimeout      time.Duration
-	WriteTimeout     time.Duration
+	MasterName   string
+	Addrs        []string
+	DB           int
+	Username     string
+	Password     string
+	KeyPrefix    string
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
 }
 
 // Client ...
@@ -33,15 +31,12 @@ type Client struct {
 // New ...
 func New(cfg Config) (*Client, error) {
 	client := redis.NewUniversalClient(&redis.UniversalOptions{
-		MasterName:       cfg.MasterName,
-		Addrs:            cfg.Addrs,
-		DB:               cfg.DB,
-		Username:         cfg.Username,
-		Password:         cfg.Password,
-		SentinelUsername: cfg.SentinelUsername,
-		SentinelPassword: cfg.SentinelPassword,
-		ReadTimeout:      cfg.ReadTimeout,
-		WriteTimeout:     cfg.WriteTimeout,
+		MasterName:   cfg.MasterName,
+		Addrs:        cfg.Addrs,
+		DB:           cfg.DB,
+		Password:     cfg.Password,
+		ReadTimeout:  cfg.ReadTimeout,
+		WriteTimeout: cfg.WriteTimeout,
 	})
 
 	if _, err := client.Ping(context.Background()).Result(); err != nil {
