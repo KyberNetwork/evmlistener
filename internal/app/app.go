@@ -56,7 +56,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	}
 	wsRPC := c.String(wsRPCFlag.Name)
 	l.Infow("Connect to node websocket rpc", "rpc", wsRPC)
-	wsEVMClient, err := evmclient.DialContext(context.Background(), wsRPC, httpClient)
+	wsEVMClient, err := evmclient.DialContextWithTimeout(context.Background(), wsRPC, httpClient, defaultRequestTimeout)
 	if err != nil {
 		l.Errorw("Fail to connect to node", "rpc", wsRPC, "error", err)
 
@@ -65,7 +65,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 
 	httpRPC := c.String(httpRPCFlag.Name)
 	l.Infow("Connect to node http rpc", "rpc", httpRPC)
-	httpEVMClient, err := evmclient.DialContext(context.Background(), httpRPC, httpClient)
+	httpEVMClient, err := evmclient.DialContextWithTimeout(context.Background(), httpRPC, httpClient, defaultRequestTimeout)
 	if err != nil {
 		l.Errorw("Fail to connect to node", "rpc", httpRPC, "error", err)
 

@@ -2,8 +2,10 @@ package evmclient
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"net/http"
+	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/common"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient/ftmclient"
@@ -97,6 +99,31 @@ func DialContext(ctx context.Context, rawurl string, httpClient *http.Client) (*
 	}
 
 	return client, nil
+}
+
+func DialContextWithTimeout(ctx context.Context, rawurl string, httpClient *http.Client, timeout time.Duration) (*Client, error) {
+	type dialContextResponse struct {
+		client *Client
+		err    error
+	}
+
+	ch := make(chan dialContextResponse, 1)
+	go func() {
+		client, err := DialContext(ctx, rawurl, httpClient)
+		ch <- dialContextResponse{
+			client: client,
+			err:    err,
+		}
+	}()
+
+	select {
+	case res := <-ch:
+		return res.client, res.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-time.After(timeout):
+		return nil, errors.New("timeout when dial RPC")
+	}
 }
 
 func (c *Client) ChainID(ctx context.Context) (*big.Int, error) {
