@@ -101,7 +101,12 @@ func DialContext(ctx context.Context, rawurl string, httpClient *http.Client) (*
 	return client, nil
 }
 
-func DialContextWithTimeout(ctx context.Context, rawurl string, httpClient *http.Client, timeout time.Duration) (*Client, error) {
+func DialContextWithTimeout(
+	ctx context.Context,
+	rawurl string,
+	httpClient *http.Client,
+	timeout time.Duration,
+) (*Client, error) {
 	type dialContextResponse struct {
 		client *Client
 		err    error
