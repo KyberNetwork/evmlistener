@@ -26,6 +26,12 @@ var (
 		Value:   "http://localhost:8545",
 		Usage:   "HTTP RPC to connect to blockchain node, default: http://localhost:8545",
 	}
+	rpcRequestTimeoutFlag = &cli.DurationFlag{
+		Name:    "rpc-request-timeout",
+		EnvVars: []string{"RPC_REQUEST_TIMEOUT"},
+		Value:   10 * time.Second, // nolint:gomnd
+		Usage:   "Timeout for RPC request",
+	}
 	sanityNodeRPCFlag = &cli.StringFlag{
 		Name:    "sanity-node-rpc",
 		EnvVars: []string{"SANITY_NODE_RPC"},
@@ -212,6 +218,7 @@ func NewFlags() []cli.Flag {
 		logLevelFlag,
 		wsRPCFlag,
 		httpRPCFlag,
+		rpcRequestTimeoutFlag,
 		sanityNodeRPCFlag,
 		sanityCheckIntervalFlag,
 	}
