@@ -51,13 +51,18 @@ func redisConfigFromCli(c *cli.Context) redis.Config {
 func NewListener(c *cli.Context) (*listener.Listener, error) {
 	l := zap.S()
 
+	rpcRequestTimeout := c.Duration(rpcRequestTimeoutFlag.Name)
+	if rpcRequestTimeout == 0 {
+		rpcRequestTimeout = defaultRequestTimeout
+	}
+
 	httpClient := &http.Client{
-		Timeout: defaultRequestTimeout,
+		Timeout: rpcRequestTimeout,
 	}
 	wsRPC := c.String(wsRPCFlag.Name)
 	l.Infow("Connect to node websocket rpc", "rpc", wsRPC)
 	wsEVMClient, err := evmclient.DialContextWithTimeout(
-		context.Background(), wsRPC, httpClient, defaultRequestTimeout)
+		context.Background(), wsRPC, httpClient, rpcRequestTimeout)
 	if err != nil {
 		l.Errorw("Fail to connect to node", "rpc", wsRPC, "error", err)
 
@@ -67,7 +72,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	httpRPC := c.String(httpRPCFlag.Name)
 	l.Infow("Connect to node http rpc", "rpc", httpRPC)
 	httpEVMClient, err := evmclient.DialContextWithTimeout(
-		context.Background(), httpRPC, httpClient, defaultRequestTimeout)
+		context.Background(), httpRPC, httpClient, rpcRequestTimeout)
 	if err != nil {
 		l.Errorw("Fail to connect to node", "rpc", httpRPC, "error", err)
 
