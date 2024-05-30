@@ -29,7 +29,7 @@ var (
 	rpcRequestTimeoutFlag = &cli.DurationFlag{
 		Name:    "rpc-request-timeout",
 		EnvVars: []string{"RPC_REQUEST_TIMEOUT"},
-		Value:   10 * time.Second,
+		Value:   10 * time.Second, // nolint:gomnd
 		Usage:   "Timeout for RPC request",
 	}
 	sanityNodeRPCFlag = &cli.StringFlag{
