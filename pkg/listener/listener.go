@@ -302,7 +302,7 @@ func (l *Listener) syncBlocks(ctx context.Context, blockCh chan types.Block) err
 
 		l.l.Errorw("Error occur while sync blocks", "error", err)
 		if !websocket.IsCloseError(err, websocket.CloseAbnormalClosure,
-			websocket.CloseNormalClosure, websocket.CloseServiceRestart) &&
+			websocket.CloseNormalClosure, websocket.CloseServiceRestart, websocket.CloseGoingAway) &&
 			!errors.Is(err, syscall.ECONNRESET) &&
 			!errors.Is(err, ethereum.NotFound) &&
 			err.Error() != errStringUnknownBlock &&
