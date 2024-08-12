@@ -38,18 +38,6 @@ var (
 		Usage:   "Interval time for running santity check, default: 24s",
 	}
 
-	sentryDSNFlag = &cli.StringFlag{
-		Name:    "sentry-dsn",
-		EnvVars: []string{"SENTRY_DSN"},
-		Usage:   "DSN for sentry client",
-	}
-	sentryLevelFlag = &cli.StringFlag{
-		Name:    "sentry-level",
-		EnvVars: []string{"SENTRY_LEVEL"},
-		Usage:   "log level report message to sentry (info, error, warn, fatal)",
-		Value:   "error",
-	}
-
 	redisMasterNameFlag = &cli.StringFlag{
 		Name:    "redis-master-name",
 		EnvVars: []string{"REDIS_MASTER_NAME"},
@@ -127,11 +115,6 @@ var (
 	}
 )
 
-// NewSentryFlags returns flags to init sentry client.
-func NewSentryFlags() []cli.Flag {
-	return []cli.Flag{sentryDSNFlag, sentryLevelFlag}
-}
-
 // NewRedisFlags returns flags for redis.
 func NewRedisFlags() []cli.Flag {
 	return []cli.Flag{
@@ -160,7 +143,6 @@ func NewFlags() []cli.Flag {
 		sanityNodeRPCFlag,
 		sanityCheckIntervalFlag,
 	}
-	flags = append(flags, NewSentryFlags()...)
 	flags = append(flags, NewRedisFlags()...)
 	flags = append(flags, NewPublisherFlags()...)
 	flags = append(flags, NewBlockKeeperFlags()...)

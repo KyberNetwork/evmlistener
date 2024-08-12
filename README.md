@@ -20,9 +20,6 @@ export SANITY_NODE_RPC="https://polygon.kyberengineering.io"
 export SANITY_CHECK_INTERVAL=10s
 export LOG_LEVEL="debug"
 
-export SENTRY_DNS=""
-export SENTRY_LEVEL="error"
-
 export REDIS_MASTER_NAME=""
 export REDIS_ADDRS="localhost:6379"
 export REDIS_DB=0

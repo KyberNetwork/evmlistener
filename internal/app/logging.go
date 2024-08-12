@@ -1,12 +1,9 @@
 package app
 
 import (
-	"fmt"
 	"io"
 	"os"
 
-	"github.com/TheZeroSlave/zapsentry"
-	"github.com/getsentry/sentry-go"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -55,36 +52,5 @@ func newLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel) {
 // the application requires extensive performance, in this case use NewLogger.
 func NewLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel, func(), error) {
 	logger, atom := newLogger(c)
-
-	// init sentry if flag dsn exists
-	if len(c.String(sentryDSNFlag.Name)) != 0 {
-		sentryClient, err := sentry.NewClient(
-			sentry.ClientOptions{
-				Dsn: c.String(sentryDSNFlag.Name),
-			},
-		)
-		if err != nil {
-			return nil, atom, nil, fmt.Errorf("failed to init sentry client: %w", err)
-		}
-
-		cfg := zapsentry.Configuration{
-			DisableStacktrace: false,
-		}
-
-		sentryLevel, err := zapcore.ParseLevel(c.String(sentryLevelFlag.Name))
-		if err != nil {
-			return nil, atom, nil, err
-		}
-
-		cfg.Level = sentryLevel
-
-		core, err := zapsentry.NewCore(cfg, zapsentry.NewSentryClientFromClient(sentryClient))
-		if err != nil {
-			return nil, atom, nil, fmt.Errorf("failed to init zap sentry: %w", err)
-		}
-		// attach to logger core
-		logger = zapsentry.AttachCoreToLogger(core, logger)
-	}
-
 	return logger, atom, NewFlusher(logger), nil
 }

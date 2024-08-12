@@ -6,11 +6,9 @@ toolchain go1.21.4
 
 require (
 	github.com/KyberNetwork/kyber-trace-go v0.1.1
-	github.com/TheZeroSlave/zapsentry v1.12.0
 	github.com/ava-labs/coreth v0.13.1
 	github.com/emirpasic/gods v1.18.1
 	github.com/ethereum/go-ethereum v1.13.14
-	github.com/getsentry/sentry-go v0.18.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/redis/go-redis/v9 v9.2.1
 	github.com/stretchr/testify v1.8.4
