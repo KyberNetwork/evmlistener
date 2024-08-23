@@ -2,6 +2,7 @@ package listener
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/encoder"
@@ -285,6 +286,20 @@ func (h *Handler) Handle(ctx context.Context, b types.Block) error {
 		log.Debugw("Ignore already handled block", "hash", b.Hash)
 
 		return nil
+	}
+
+	blockHead, err := h.blockKeeper.Head()
+	if err == nil {
+		blockDiff := new(big.Int).Sub(blockHead.Number, b.Number).Int64()
+		if blockDiff > int64(h.blockKeeper.Cap()) {
+			log.Warnw("Ignore block that too old",
+				"blockNumber", b.Number,
+				"blockHeadNumber", blockHead.Number,
+				"blockDiff", blockDiff,
+			)
+
+			return nil
+		}
 	}
 
 	return h.handleNewBlock(ctx, b)
