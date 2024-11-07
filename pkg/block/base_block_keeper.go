@@ -159,7 +159,7 @@ func (k *BaseBlockKeeper) GetRecentBlocks(n int) ([]types.Block, error) {
 
 	blocks := make([]types.Block, 0, n)
 	hash := k.head
-	for i := 0; i < n; i++ {
+	for range n {
 		block, ok := k.blockMap[hash]
 		if !ok {
 			break

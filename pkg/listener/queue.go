@@ -173,7 +173,7 @@ func (q *Queue) Values() []*types.Block {
 	defer q.mu.Unlock()
 
 	values := make([]*types.Block, 0, q.size)
-	for i := 0; i < q.maxSize; i++ {
+	for i := range q.maxSize {
 		v := q.values[(q.start+i)%q.maxSize]
 		if v != nil {
 			values = append(values, v)

@@ -141,7 +141,6 @@ func (l *Listener) getBlocks(ctx context.Context, fromBlock, toBlock uint64) ([]
 
 	blocks := make([]types.Block, toBlock-fromBlock+1)
 	for i := range blocks {
-		i := i
 		blkNum := uint64(i) + fromBlock
 		g.Go(func() error {
 			block, err := getBlockByNumber(ctx, l.httpEVMClient, new(big.Int).SetUint64(blkNum),
