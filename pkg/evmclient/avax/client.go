@@ -26,7 +26,7 @@ func (c *Client) SubscribeNewHead(
 	ctx context.Context, ch chan<- *common.Header,
 ) (ethereum.Subscription, error) {
 	// Subscribe headers to this intermediate channel, calculate hash and forward for original channel.
-	ch2 := make(chan *Header, 1000)
+	ch2 := make(chan *Header)
 
 	sub, err := c.c.EthSubscribe(ctx, ch2, "newHeads")
 	if err != nil {
