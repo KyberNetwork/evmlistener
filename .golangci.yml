@@ -26,6 +26,7 @@ linters:
     - testifylint
     - mnd
     - gomnd
+    - tagalign
 
 linters-settings:
   funlen:
