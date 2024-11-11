@@ -4,22 +4,12 @@ run:
 linters:
   enable-all: true
   disable:
-    - maligned
-    - interfacer
-    - scopelint
     - gomoddirectives
     - nolintlint
-    - exhaustivestruct
     - wrapcheck
     - varnamelen
-    - golint
     - paralleltest
     - wsl
-    - nosnakecase
-    - deadcode
-    - ifshort
-    - varcheck
-    - structcheck
     - rowserrcheck
     - sqlclosecheck
     - wastedassign
@@ -27,13 +17,16 @@ linters:
     - nonamedreturns
     - testpackage
     - tagliatelle
-    - goerr113
+    - err113
     - depguard
     - revive
     - forbidigo
     - inamedparam
     - ireturn
     - testifylint
+    - mnd
+    - gomnd
+    - tagalign
 
 linters-settings:
   funlen:

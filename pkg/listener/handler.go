@@ -181,7 +181,7 @@ func (h *Handler) findReorgBlocks(
 	}
 
 	n := len(newBlocks)
-	for i := 0; i < n/2; i++ {
+	for i := range n / 2 {
 		newBlocks[i], newBlocks[n-i-1] = newBlocks[n-i-1], newBlocks[i]
 	}
 

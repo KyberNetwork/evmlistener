@@ -49,7 +49,7 @@ func (ts *ListenerTestSuite) TestRun() {
 	}()
 
 	// Sent new head to listeneer.
-	for i := 0; i < 11; i++ {
+	for range 11 {
 		time.Sleep(100 * time.Millisecond)
 		ts.evmClient.Next()
 	}

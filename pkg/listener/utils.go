@@ -21,7 +21,7 @@ const (
 func getLogsByBlockHash(ctx context.Context, evmClient evmclient.IClient, hash string,
 	contracts []string, topics [][]string,
 ) (logs []types.Log, err error) {
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		logs, err = evmClient.FilterLogs(ctx, evmclient.FilterQuery{
 			BlockHash: &hash,
 			Addresses: contracts,
@@ -60,7 +60,7 @@ func GetBlocks(ctx context.Context, evmClient evmclient.IClient, fromBlock uint6
 	blocks[n-1] = b
 
 	hash := b.ParentHash
-	for i := n - 2; i >= 0; i-- { //nolint:gomnd
+	for i := n - 2; i >= 0; i-- {
 		b, err = getBlockByHash(ctx, evmClient, hash, withLogs, contracts, topics)
 		if err != nil {
 			return nil, err
@@ -75,7 +75,7 @@ func GetBlocks(ctx context.Context, evmClient evmclient.IClient, fromBlock uint6
 func getHeaderByHash(
 	ctx context.Context, evmClient evmclient.IClient, hash string,
 ) (header *types.Header, err error) {
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		header, err = evmClient.HeaderByHash(ctx, hash)
 		if err == nil {
 			return header, nil
@@ -112,7 +112,7 @@ func getBlockByHash(ctx context.Context, evmClient evmclient.IClient, hash strin
 func getHeaderByNumber(
 	ctx context.Context, evmClient evmclient.IClient, num *big.Int,
 ) (header *types.Header, err error) {
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		header, err = evmClient.HeaderByNumber(ctx, num)
 		if err == nil {
 			return header, nil

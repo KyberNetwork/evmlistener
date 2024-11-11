@@ -58,7 +58,7 @@ func (k *RedisBlockKeeper) Init() error {
 	n := k.BaseBlockKeeper.Cap()
 	blocks := make([]types.Block, 0, n)
 	hash := head
-	for i := 0; i < n; i++ {
+	for range n {
 		var block types.Block
 		err = k.redisClient.Get(context.Background(), hash, &block)
 		if err != nil {
