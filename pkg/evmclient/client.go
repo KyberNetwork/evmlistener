@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/common"
-	"github.com/KyberNetwork/evmlistener/pkg/evmclient/avax"
 	commonclient "github.com/KyberNetwork/evmlistener/pkg/evmclient/common"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -55,7 +54,6 @@ type Client struct {
 	chainID      uint64
 	ethClient    *ethclient.Client
 	customClient *commonclient.Client
-	avaxClient   *avax.Client
 }
 
 func Dial(rawurl string, httpClient *http.Client) (*Client, error) {
@@ -79,10 +77,8 @@ func DialContext(ctx context.Context, rawurl string, httpClient *http.Client) (*
 	}
 
 	switch client.chainID {
-	case chainIDFantom, chainIDZKSync:
+	case chainIDFantom, chainIDAvalanche, chainIDZKSync:
 		client.customClient = commonclient.NewClient(rpcClient)
-	case chainIDAvalanche:
-		client.avaxClient = avax.NewClient(rpcClient)
 	default:
 		client.ethClient = ethClient
 	}
@@ -130,10 +126,8 @@ func (c *Client) ChainID(ctx context.Context) (*big.Int, error) {
 
 func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
 	switch c.chainID {
-	case chainIDFantom, chainIDZKSync:
+	case chainIDFantom, chainIDAvalanche, chainIDZKSync:
 		return c.customClient.BlockNumber(ctx)
-	case chainIDAvalanche:
-		return c.avaxClient.BlockNumber(ctx)
 	default:
 		return c.ethClient.BlockNumber(ctx)
 	}
@@ -143,17 +137,8 @@ func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
 func (c *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (Subscription, error) {
 	switch c.chainID {
 	case chainIDFantom, chainIDAvalanche, chainIDZKSync:
-		var (
-			err      error
-			sub      Subscription
-			headerCh = make(chan *commonclient.Header)
-		)
-
-		if c.chainID == chainIDAvalanche {
-			sub, err = c.avaxClient.SubscribeNewHead(ctx, headerCh)
-		} else {
-			sub, err = c.customClient.SubscribeNewHead(ctx, headerCh)
-		}
+		headerCh := make(chan *commonclient.Header)
+		sub, err := c.customClient.SubscribeNewHead(ctx, headerCh)
 		if err != nil {
 			return nil, err
 		}
@@ -204,10 +189,8 @@ func (c *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) 
 
 func (c *Client) FilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, error) {
 	switch c.chainID {
-	case chainIDFantom, chainIDZKSync:
+	case chainIDFantom, chainIDAvalanche, chainIDZKSync:
 		return filterLogs(ctx, c.customClient, q)
-	case chainIDAvalanche:
-		return filterLogs(ctx, c.avaxClient, q)
 	default:
 		return filterLogs(ctx, c.ethClient, q)
 	}
@@ -216,15 +199,7 @@ func (c *Client) FilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, er
 func (c *Client) HeaderByHash(ctx context.Context, hash string) (*types.Header, error) {
 	switch c.chainID {
 	case chainIDFantom, chainIDAvalanche, chainIDZKSync:
-		var (
-			err    error
-			header *commonclient.Header
-		)
-		if c.chainID == chainIDAvalanche {
-			header, err = c.avaxClient.HeaderByHash(ctx, ethcommon.HexToHash(hash))
-		} else {
-			header, err = c.customClient.HeaderByHash(ctx, ethcommon.HexToHash(hash))
-		}
+		header, err := c.customClient.HeaderByHash(ctx, ethcommon.HexToHash(hash))
 		if err != nil {
 			return nil, err
 		}
@@ -253,15 +228,7 @@ func (c *Client) HeaderByHash(ctx context.Context, hash string) (*types.Header, 
 func (c *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
 	switch c.chainID {
 	case chainIDFantom, chainIDAvalanche, chainIDZKSync:
-		var (
-			err    error
-			header *commonclient.Header
-		)
-		if c.chainID == chainIDAvalanche {
-			header, err = c.avaxClient.HeaderByNumber(ctx, number)
-		} else {
-			header, err = c.customClient.HeaderByNumber(ctx, number)
-		}
+		header, err := c.customClient.HeaderByNumber(ctx, number)
 		if err != nil {
 			return nil, err
 		}
