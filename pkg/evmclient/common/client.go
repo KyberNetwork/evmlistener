@@ -43,7 +43,7 @@ func NewClient(c *rpc.Client) *Client {
 }
 
 type Header struct {
-	Hash common.Hash `json:"hash"`
+	BlockHash common.Hash `json:"hash"`
 	types.Header
 }
 
@@ -78,7 +78,7 @@ func (h *Header) UnmarshalJSON(data []byte) error {
 	if dec.Hash == nil {
 		return errors.New("missing required field 'hash' for Header")
 	}
-	h.Hash = *dec.Hash
+	h.BlockHash = *dec.Hash
 
 	if dec.ParentHash == nil {
 		return errors.New("missing required field 'parentHash' for Header")
@@ -157,6 +157,10 @@ func (h *Header) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
+}
+
+func (h *Header) Hash() common.Hash {
+	return h.BlockHash
 }
 
 func (c *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*Header, error) {

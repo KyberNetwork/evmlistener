@@ -26,6 +26,12 @@ var (
 		Value:   "http://localhost:8545",
 		Usage:   "HTTP RPC to connect to blockchain node, default: http://localhost:8545",
 	}
+	useCustomClientFlag = &cli.BoolFlag{
+		Name:    "use-custom-client",
+		EnvVars: []string{"USE_CUSTOM_CLIENT"},
+		Value:   true,
+		Usage:   "Use custom client to connect to blockchain node",
+	}
 	rpcRequestTimeoutFlag = &cli.DurationFlag{
 		Name:    "rpc-request-timeout",
 		EnvVars: []string{"RPC_REQUEST_TIMEOUT"},
@@ -218,6 +224,7 @@ func NewFlags() []cli.Flag {
 		logLevelFlag,
 		wsRPCFlag,
 		httpRPCFlag,
+		useCustomClientFlag,
 		rpcRequestTimeoutFlag,
 		sanityNodeRPCFlag,
 		sanityCheckIntervalFlag,
