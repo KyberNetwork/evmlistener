@@ -7,19 +7,18 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/KyberNetwork/evmlistener/pkg/common"
-	commonclient "github.com/KyberNetwork/evmlistener/pkg/evmclient/common"
-	"github.com/KyberNetwork/evmlistener/pkg/types"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+
+	"github.com/KyberNetwork/evmlistener/pkg/common"
+	commonclient "github.com/KyberNetwork/evmlistener/pkg/evmclient/common"
+	"github.com/KyberNetwork/evmlistener/pkg/types"
 )
 
-const (
-	chainIDFantom    = 250
-	chainIDAvalanche = 43114
-	chainIDZKSync    = 324
+var (
+	UseCustomClient bool
 )
 
 type FilterQuery struct {
@@ -56,10 +55,6 @@ type Client struct {
 	customClient *commonclient.Client
 }
 
-func Dial(rawurl string, httpClient *http.Client) (*Client, error) {
-	return DialContext(context.Background(), rawurl, httpClient)
-}
-
 func DialContext(ctx context.Context, rawurl string, httpClient *http.Client) (*Client, error) {
 	rpcClient, err := rpc.DialOptions(ctx, rawurl, rpc.WithHTTPClient(httpClient))
 	if err != nil {
@@ -76,15 +71,11 @@ func DialContext(ctx context.Context, rawurl string, httpClient *http.Client) (*
 		chainID: chainID.Uint64(),
 	}
 
-	switch client.chainID {
-	case chainIDFantom, chainIDAvalanche, chainIDZKSync:
+	switch {
+	case UseCustomClient:
 		client.customClient = commonclient.NewClient(rpcClient)
 	default:
 		client.ethClient = ethClient
-	}
-
-	if err != nil {
-		return nil, err
 	}
 
 	return client, nil
@@ -120,13 +111,13 @@ func DialContextWithTimeout(
 	}
 }
 
-func (c *Client) ChainID(ctx context.Context) (*big.Int, error) {
+func (c *Client) ChainID(_ context.Context) (*big.Int, error) {
 	return new(big.Int).SetUint64(c.chainID), nil
 }
 
 func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
-	switch c.chainID {
-	case chainIDFantom, chainIDAvalanche, chainIDZKSync:
+	switch {
+	case c.customClient != nil:
 		return c.customClient.BlockNumber(ctx)
 	default:
 		return c.ethClient.BlockNumber(ctx)
@@ -135,8 +126,8 @@ func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
 
 //nolint:cyclop,ireturn,gocognit
 func (c *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (Subscription, error) {
-	switch c.chainID {
-	case chainIDFantom, chainIDAvalanche, chainIDZKSync:
+	switch {
+	case c.customClient != nil:
 		headerCh := make(chan *commonclient.Header)
 		sub, err := c.customClient.SubscribeNewHead(ctx, headerCh)
 		if err != nil {
@@ -150,7 +141,7 @@ func (c *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) 
 					return
 				case header := <-headerCh:
 					ch <- &types.Header{
-						Hash:       common.ToHex(header.Hash),
+						Hash:       common.ToHex(header.Hash()),
 						ParentHash: common.ToHex(header.ParentHash),
 						Number:     header.Number,
 						Time:       header.Time,
@@ -188,8 +179,8 @@ func (c *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) 
 }
 
 func (c *Client) FilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, error) {
-	switch c.chainID {
-	case chainIDFantom, chainIDAvalanche, chainIDZKSync:
+	switch {
+	case c.customClient != nil:
 		return filterLogs(ctx, c.customClient, q)
 	default:
 		return filterLogs(ctx, c.ethClient, q)
@@ -197,15 +188,15 @@ func (c *Client) FilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, er
 }
 
 func (c *Client) HeaderByHash(ctx context.Context, hash string) (*types.Header, error) {
-	switch c.chainID {
-	case chainIDFantom, chainIDAvalanche, chainIDZKSync:
+	switch {
+	case c.customClient != nil:
 		header, err := c.customClient.HeaderByHash(ctx, ethcommon.HexToHash(hash))
 		if err != nil {
 			return nil, err
 		}
 
 		return &types.Header{
-			Hash:       common.ToHex(header.Hash),
+			Hash:       common.ToHex(header.Hash()),
 			ParentHash: common.ToHex(header.ParentHash),
 			Number:     header.Number,
 			Time:       header.Time,
@@ -226,15 +217,15 @@ func (c *Client) HeaderByHash(ctx context.Context, hash string) (*types.Header, 
 }
 
 func (c *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	switch c.chainID {
-	case chainIDFantom, chainIDAvalanche, chainIDZKSync:
+	switch {
+	case c.customClient != nil:
 		header, err := c.customClient.HeaderByNumber(ctx, number)
 		if err != nil {
 			return nil, err
 		}
 
 		return &types.Header{
-			Hash:       common.ToHex(header.Hash),
+			Hash:       common.ToHex(header.Hash()),
 			ParentHash: common.ToHex(header.ParentHash),
 			Number:     header.Number,
 			Time:       header.Time,

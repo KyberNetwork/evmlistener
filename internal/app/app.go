@@ -1,10 +1,11 @@
 package app
 
 import (
-	"context"
 	"net/http"
-	"strconv"
 	"time"
+
+	"github.com/urfave/cli/v2"
+	"go.uber.org/zap"
 
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/encoder"
@@ -13,15 +14,13 @@ import (
 	publisherpkg "github.com/KyberNetwork/evmlistener/pkg/publisher"
 	"github.com/KyberNetwork/evmlistener/pkg/publisher/kafka"
 	"github.com/KyberNetwork/evmlistener/pkg/redis"
-	"github.com/urfave/cli/v2"
-	"go.uber.org/zap"
 )
 
 const (
 	defaultRequestTimeout = 10 * time.Second
 )
 
-// NewApp creates a new cli App instance with common flags pre-loaded.
+// NewApp creates a new cli App instance with common flags preloaded.
 func NewApp() *cli.App {
 	app := cli.NewApp()
 	app.Flags = NewFlags()
@@ -29,20 +28,20 @@ func NewApp() *cli.App {
 	return app
 }
 
-func redisConfigFromCli(c *cli.Context) redis.Config {
+func redisConfigFromCli() redis.Config {
 	cfg := redis.Config{
-		MasterName:   c.String(redisMasterNameFlag.Name),
-		Addrs:        c.StringSlice(redisAddrsFlag.Name),
-		DB:           c.Int(redisDBFlag.Name),
-		KeyPrefix:    c.String(redisKeyPrefixFlag.Name),
-		ReadTimeout:  c.Duration(redisReadTimeoutFlag.Name),
-		WriteTimeout: c.Duration(redisWriteTimeoutFlag.Name),
+		MasterName:   redisMasterNameFlag.Value,
+		Addrs:        redisAddrsFlag.Value.Value(),
+		DB:           redisDBFlag.Value,
+		KeyPrefix:    redisKeyPrefixFlag.Value,
+		ReadTimeout:  redisReadTimeoutFlag.Value,
+		WriteTimeout: redisWriteTimeoutFlag.Value,
 	}
 
-	cfg.SentinelUsername = c.String(redisUsernameFlag.Name)
-	cfg.SentinelPassword = c.String(redisPasswordFlag.Name)
-	cfg.Username = c.String(redisUsernameFlag.Name)
-	cfg.Password = c.String(redisPasswordFlag.Name)
+	cfg.SentinelUsername = redisUsernameFlag.Value
+	cfg.SentinelPassword = redisPasswordFlag.Value
+	cfg.Username = redisUsernameFlag.Value
+	cfg.Password = redisPasswordFlag.Value
 
 	return cfg
 }
@@ -51,7 +50,9 @@ func redisConfigFromCli(c *cli.Context) redis.Config {
 func NewListener(c *cli.Context) (*listener.Listener, error) {
 	l := zap.S()
 
-	rpcRequestTimeout := c.Duration(rpcRequestTimeoutFlag.Name)
+	evmclient.UseCustomClient = useCustomClientFlag.Value
+
+	rpcRequestTimeout := rpcRequestTimeoutFlag.Value
 	if rpcRequestTimeout == 0 {
 		rpcRequestTimeout = defaultRequestTimeout
 	}
@@ -59,20 +60,20 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	httpClient := &http.Client{
 		Timeout: rpcRequestTimeout,
 	}
-	wsRPC := c.String(wsRPCFlag.Name)
+	wsRPC := wsRPCFlag.Value
 	l.Infow("Connect to node websocket rpc", "rpc", wsRPC)
 	wsEVMClient, err := evmclient.DialContextWithTimeout(
-		context.Background(), wsRPC, httpClient, rpcRequestTimeout)
+		c.Context, wsRPC, httpClient, rpcRequestTimeout)
 	if err != nil {
 		l.Errorw("Fail to connect to node", "rpc", wsRPC, "error", err)
 
 		return nil, err
 	}
 
-	httpRPC := c.String(httpRPCFlag.Name)
+	httpRPC := httpRPCFlag.Value
 	l.Infow("Connect to node http rpc", "rpc", httpRPC)
 	httpEVMClient, err := evmclient.DialContextWithTimeout(
-		context.Background(), httpRPC, httpClient, rpcRequestTimeout)
+		c.Context, httpRPC, httpClient, rpcRequestTimeout)
 	if err != nil {
 		l.Errorw("Fail to connect to node", "rpc", httpRPC, "error", err)
 
@@ -80,21 +81,21 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	}
 
 	l.Infow("Get chainID from node")
-	chainID, err := httpEVMClient.ChainID(context.Background())
+	chainID, err := httpEVMClient.ChainID(c.Context)
 	if err != nil {
 		l.Errorw("Fail to get chainID", "error", err)
 
 		return nil, err
 	}
 
-	l = l.With("chainName", chainIDToName(chainID.Int64()))
+	l = l.With("chainID", chainID.Int64())
 
-	sanityCheckInterval := c.Duration(sanityCheckIntervalFlag.Name)
+	sanityCheckInterval := sanityCheckIntervalFlag.Value
 	var sanityEVMClient evmclient.IClient
-	sanityRPC := c.String(sanityNodeRPCFlag.Name)
+	sanityRPC := sanityNodeRPCFlag.Value
 	if sanityRPC != "" {
 		l.Infow("Connect to public node rpc for sanity check", "rpc", sanityRPC)
-		sanityEVMClient, err = evmclient.DialContext(context.Background(), sanityRPC, httpClient)
+		sanityEVMClient, err = evmclient.DialContext(c.Context, sanityRPC, httpClient)
 		if err != nil {
 			l.Errorw("Fail to setup EVM client for sanity check", "error", err)
 
@@ -102,7 +103,7 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		}
 	}
 
-	redisConfig := redisConfigFromCli(c)
+	redisConfig := redisConfigFromCli()
 	redisConfigForLog := redisConfig
 	redisConfigForLog.SentinelPassword = "***"
 	redisConfigForLog.Password = "***"
@@ -114,22 +115,22 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		return nil, err
 	}
 
-	maxNumBlocks := c.Int(maxNumBlocksFlag.Name)
-	blockExpiration := c.Duration(blockExpirationFlag.Name)
+	maxNumBlocks := maxNumBlocksFlag.Value
+	blockExpiration := blockExpirationFlag.Value
 	l.Infow("Setup new BlockKeeper", "maxNumBlocks", maxNumBlocks, "expiration", blockExpiration)
 	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxNumBlocks, blockExpiration)
 
-	topic := c.String(publisherTopicFlag.Name)
-	publisher, err := getPublisher(c, redisClient, topic)
+	topic := publisherTopicFlag.Value
+	publisher, err := getPublisher(redisClient, topic)
 	if err != nil {
 		l.Errorw("Fail to get publisher", "error", err)
 
 		return nil, err
 	}
-	encoder := getMessageEncoder(c)
+	msgEncoder := getMessageEncoder()
 
 	l.Infow("Setup handler", "topic", topic)
-	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher, encoder,
+	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher, msgEncoder,
 		listener.WithEventLogs(nil, nil))
 
 	l.Infow("Setup listener")
@@ -138,18 +139,18 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		listener.WithEventLogs(nil, nil)), nil
 }
 
-func getPublisher(c *cli.Context, redisClient *redis.Client, topic string) (publisherpkg.Publisher, error) {
+func getPublisher(redisClient *redis.Client, topic string) (publisherpkg.Publisher, error) {
 	var publisher publisherpkg.Publisher
 	var err error
 
-	publisherType := c.String(publisherTypeFlag.Name)
+	publisherType := publisherTypeFlag.Value
 	switch publisherType {
 	case publisherpkg.PublisherTypeKafka:
 		config := &kafka.Config{
-			Addresses:         c.StringSlice(kafkaAddrsFlag.Name),
-			UseAuthentication: c.Bool(kafkaUseAuthenticationFlag.Name),
-			Username:          c.String(kafkaUsernameFlag.Name),
-			Password:          c.String(kafkaPasswordFlag.Name),
+			Addresses:         kafkaAddrsFlag.Value.Value(),
+			UseAuthentication: kafkaUseAuthenticationFlag.Value,
+			Username:          kafkaUsernameFlag.Value,
+			Password:          kafkaPasswordFlag.Value,
 		}
 		publisher, err = kafka.NewPublisher(config)
 		if err != nil {
@@ -159,78 +160,18 @@ func getPublisher(c *cli.Context, redisClient *redis.Client, topic string) (publ
 			return nil, err
 		}
 	default:
-		maxLen := c.Int64(publisherMaxLenFlag.Name)
+		maxLen := publisherMaxLenFlag.Value
 		publisher = redis.NewStream(redisClient, maxLen)
 	}
 
 	return publisher, err
 }
 
-func getMessageEncoder(c *cli.Context) encoder.Encoder {
-	encoderType := c.String(encoderTypeFlag.Name)
-	switch encoderType {
+func getMessageEncoder() encoder.Encoder {
+	switch encoderTypeFlag.Value {
 	case encoder.EncoderTypeProtobuf:
 		return encoder.NewProtobufEncoder()
 	default:
 		return encoder.NewJSONEncoder()
-	}
-}
-
-const (
-	chainIDEthereum     = 1
-	chainIDOptimism     = 10
-	chainIDCronos       = 25
-	chainIDBSC          = 56
-	chainIDVelas        = 106
-	chainIDPolygon      = 137
-	chainIDBitTorrent   = 199
-	chainIDFantom       = 250
-	chainIDZKSyncEra    = 324
-	chainIDPolygonZKEVM = 1101
-	chainIDBase         = 8453
-	chainIDArbitrum     = 42161
-	chainIDOasis        = 42262
-	chainIDAvalanche    = 43114
-	chainIDLinea        = 59144
-	chainIDAurora       = 1313161554
-)
-
-//nolint:cyclop
-func chainIDToName(chainID int64) string {
-	switch chainID {
-	case chainIDEthereum:
-		return "Ethereum"
-	case chainIDOptimism:
-		return "Optimism"
-	case chainIDCronos:
-		return "Cronos"
-	case chainIDBSC:
-		return "BSC"
-	case chainIDVelas:
-		return "Velas"
-	case chainIDPolygon:
-		return "Polygon"
-	case chainIDBitTorrent:
-		return "BitTorrent"
-	case chainIDFantom:
-		return "Fantom"
-	case chainIDArbitrum:
-		return "Arbitrum"
-	case chainIDOasis:
-		return "Oasis"
-	case chainIDAvalanche:
-		return "Avalanche"
-	case chainIDAurora:
-		return "Aurora"
-	case chainIDLinea:
-		return "Linea"
-	case chainIDPolygonZKEVM:
-		return "Polygon zkEVM"
-	case chainIDZKSyncEra:
-		return "zkSync Era"
-	case chainIDBase:
-		return "Base"
-	default:
-		return strconv.FormatInt(chainID, 10)
 	}
 }
