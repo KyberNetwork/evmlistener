@@ -36,13 +36,13 @@ func (ts *HandlerTestSuite) SetupTest() {
 	ts.blockKeeper = block.NewBaseBlockKeeper(32)
 	ts.publisher = NewPublisherMock(1000)
 	ts.encoder = encoder.NewJSONEncoder()
-	ts.handler = NewHandler(zap.S(), "test-topic", ts.evmClient, ts.blockKeeper, ts.publisher, ts.encoder)
+	ts.handler = NewHandler(HandlerConfig{}, zap.S(), "test-topic", ts.evmClient, ts.blockKeeper, ts.publisher, ts.encoder)
 }
 
 func (ts *HandlerTestSuite) TestInit() {
 	ts.evmClient.SetHead(34)
 	blockKeeper := NewBlockKeeperMock(32)
-	handler := NewHandler(zap.S(), "test-topic", ts.evmClient, blockKeeper, ts.publisher, ts.encoder)
+	handler := NewHandler(HandlerConfig{}, zap.S(), "test-topic", ts.evmClient, blockKeeper, ts.publisher, ts.encoder)
 
 	// Init handler without saved data.
 	err := handler.Init(context.Background())
