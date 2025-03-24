@@ -49,6 +49,12 @@ var (
 		Value:   24 * time.Second, //nolint:gomnd
 		Usage:   "Interval time for running santity check, default: 24s",
 	}
+	blockSlowWarningThresholdFlag = &cli.DurationFlag{
+		Name:    "block-slow-warning-threshold",
+		EnvVars: []string{"BLOCK_SLOW_WARNING_THRESHOLD"},
+		Value:   5 * time.Minute, //nolint:gomnd
+		Usage:   "Threshold for warning slow block",
+	}
 
 	sentryDSNFlag = &cli.StringFlag{
 		Name:    "sentry-dsn",
@@ -228,6 +234,7 @@ func NewFlags() []cli.Flag {
 		rpcRequestTimeoutFlag,
 		sanityNodeRPCFlag,
 		sanityCheckIntervalFlag,
+		blockSlowWarningThresholdFlag,
 	}
 	flags = append(flags, NewSentryFlags()...)
 	flags = append(flags, NewRedisFlags()...)

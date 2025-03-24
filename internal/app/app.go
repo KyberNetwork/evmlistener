@@ -129,7 +129,8 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	msgEncoder := getMessageEncoder()
 
 	l.Infow("Setup handler", "topic", topic)
-	handler := listener.NewHandler(l, topic, httpEVMClient, blockKeeper, publisher, msgEncoder,
+	handler := listener.NewHandler(listener.HandlerConfig{BlockSlowWarningThreshold: blockSlowWarningThresholdFlag.Value},
+		l, topic, httpEVMClient, blockKeeper, publisher, msgEncoder,
 		listener.WithEventLogs(nil, nil))
 
 	l.Infow("Setup listener")

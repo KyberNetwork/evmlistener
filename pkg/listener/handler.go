@@ -3,6 +3,7 @@ package listener
 import (
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/encoder"
@@ -13,8 +14,13 @@ import (
 	"go.uber.org/zap"
 )
 
+type HandlerConfig struct {
+	BlockSlowWarningThreshold time.Duration
+}
+
 // Handler ...
 type Handler struct {
+	cfg   HandlerConfig
 	topic string
 
 	evmClient   evmclient.IClient
@@ -27,7 +33,7 @@ type Handler struct {
 
 // NewHandler ...
 func NewHandler(
-	l *zap.SugaredLogger, topic string, evmClient evmclient.IClient,
+	cfg HandlerConfig, l *zap.SugaredLogger, topic string, evmClient evmclient.IClient,
 	blockKeeper block.Keeper, publisher publisher.Publisher, encoder encoder.Encoder,
 	options ...Option,
 ) *Handler {
@@ -37,6 +43,7 @@ func NewHandler(
 	}
 
 	return &Handler{
+		cfg:         cfg,
 		topic:       topic,
 		evmClient:   evmClient,
 		blockKeeper: blockKeeper,
@@ -212,6 +219,11 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 	)
 
 	log.Infow("Handling new block")
+	now := time.Now()
+	blockTime := time.Unix(int64(b.Timestamp), 0)
+	if now.Sub(blockTime) > h.cfg.BlockSlowWarningThreshold {
+		log.Warnw("Block is slow", "blockTime", blockTime)
+	}
 
 	isReorg, err := h.blockKeeper.IsReorg(b)
 	if err != nil {
