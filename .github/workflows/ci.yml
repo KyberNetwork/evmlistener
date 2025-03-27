@@ -77,13 +77,13 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v3
         with:
-          go-version: "1.22.x"
+          go-version: "1.23.x"
       - name: Checkout
         uses: actions/checkout@v3
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.59.1
+          version: v1.63.4
           args: --config=.golangci.yml --timeout=5m
           skip-pkg-cache: true
           skip-build-cache: true

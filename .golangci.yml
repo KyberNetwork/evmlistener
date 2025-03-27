@@ -27,7 +27,7 @@ linters:
     - mnd
     - gomnd
     - tagalign
-
+    - gosec
 linters-settings:
   funlen:
     lines: 90
