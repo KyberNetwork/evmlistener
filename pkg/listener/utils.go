@@ -21,7 +21,7 @@ const (
 func getLogsByBlockHash(ctx context.Context, evmClient evmclient.IClient, hash string,
 	contracts []string, topics [][]string,
 ) (logs []types.Log, err error) {
-	for range 3 {
+	for range 5 {
 		logs, err = evmClient.FilterLogs(ctx, evmclient.FilterQuery{
 			BlockHash: &hash,
 			Addresses: contracts,
@@ -35,7 +35,7 @@ func getLogsByBlockHash(ctx context.Context, evmClient evmclient.IClient, hash s
 			return logs, nil
 		}
 
-		if errors.Is(err, ethereum.NotFound) && err.Error() != errStringUnknownBlock {
+		if !errors.Is(err, ethereum.NotFound) && err.Error() != errStringUnknownBlock {
 			return nil, err
 		}
 
@@ -75,13 +75,13 @@ func GetBlocks(ctx context.Context, evmClient evmclient.IClient, fromBlock uint6
 func getHeaderByHash(
 	ctx context.Context, evmClient evmclient.IClient, hash string,
 ) (header *types.Header, err error) {
-	for range 3 {
+	for range 5 {
 		header, err = evmClient.HeaderByHash(ctx, hash)
 		if err == nil {
 			return header, nil
 		}
 
-		if errors.Is(err, ethereum.NotFound) && err.Error() != errStringUnknownBlock {
+		if !errors.Is(err, ethereum.NotFound) && err.Error() != errStringUnknownBlock {
 			return nil, err
 		}
 
