@@ -7,13 +7,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/KyberNetwork/evmlistener/pkg/common"
-	commonclient "github.com/KyberNetwork/evmlistener/pkg/evmclient/common"
-	"github.com/KyberNetwork/evmlistener/pkg/types"
+	"github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+
+	"github.com/KyberNetwork/evmlistener/pkg/common"
+	commonclient "github.com/KyberNetwork/evmlistener/pkg/evmclient/common"
+	"github.com/KyberNetwork/evmlistener/pkg/types"
 )
 
 var UseCustomClient bool // nolint: gochecknoglobals
@@ -26,16 +28,7 @@ type FilterQuery struct {
 	Topics    [][]string
 }
 
-type Subscription interface {
-	// Unsubscribe cancels the sending of events to the data channel
-	// and closes the error channel.
-	Unsubscribe()
-	// Err returns the subscription error channel. The error channel receives
-	// a value if there is an issue with the subscription (e.g. the network connection
-	// delivering the events has been closed). Only one value will ever be sent.
-	// The error channel is closed by Unsubscribe.
-	Err() <-chan error
-}
+type Subscription = ethereum.Subscription
 
 // IClient is an interface for EVM client.
 type IClient interface {

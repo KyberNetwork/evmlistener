@@ -1,34 +1,7 @@
+version: '2'
+
 run:
-  deadline: 5m
+  timeout: 5m
 
 linters:
-  enable-all: true
-  disable:
-    - gomoddirectives
-    - nolintlint
-    - wrapcheck
-    - varnamelen
-    - paralleltest
-    - wsl
-    - rowserrcheck
-    - sqlclosecheck
-    - wastedassign
-    - exhaustruct
-    - nonamedreturns
-    - testpackage
-    - tagliatelle
-    - err113
-    - depguard
-    - revive
-    - forbidigo
-    - inamedparam
-    - ireturn
-    - testifylint
-    - mnd
-    - gomnd
-    - tagalign
-
-linters-settings:
-  funlen:
-    lines: 90
-    statements: 60
+  default: standard

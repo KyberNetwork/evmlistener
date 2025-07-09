@@ -4,15 +4,17 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/urfave/cli/v2"
+	"go.uber.org/zap"
+
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/encoder"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
+	"github.com/KyberNetwork/evmlistener/pkg/evmclient/blockpoller"
 	"github.com/KyberNetwork/evmlistener/pkg/listener"
 	publisherpkg "github.com/KyberNetwork/evmlistener/pkg/publisher"
 	"github.com/KyberNetwork/evmlistener/pkg/publisher/kafka"
 	"github.com/KyberNetwork/evmlistener/pkg/redis"
-	"github.com/urfave/cli/v2"
-	"go.uber.org/zap"
 )
 
 const (
@@ -55,18 +57,8 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	if rpcRequestTimeout == 0 {
 		rpcRequestTimeout = defaultRequestTimeout
 	}
-
 	httpClient := &http.Client{
 		Timeout: rpcRequestTimeout,
-	}
-	wsRPC := wsRPCFlag.Value
-	l.Infow("Connect to node websocket rpc", "rpc", wsRPC)
-	wsEVMClient, err := evmclient.DialContextWithTimeout(
-		c.Context, wsRPC, httpClient, rpcRequestTimeout)
-	if err != nil {
-		l.Errorw("Fail to connect to node", "rpc", wsRPC, "error", err)
-
-		return nil, err
 	}
 
 	httpRPC := httpRPCFlag.Value
@@ -77,6 +69,24 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		l.Errorw("Fail to connect to node", "rpc", httpRPC, "error", err)
 
 		return nil, err
+	}
+
+	wsRPC := wsRPCFlag.Value
+	var wsEVMClient evmclient.IClient
+	if wsRPC != "" {
+		var err error
+		l.Infow("Connect to node websocket rpc", "rpc", wsRPC)
+		wsEVMClient, err = evmclient.DialContextWithTimeout(
+			c.Context, wsRPC, httpClient, rpcRequestTimeout)
+		if err != nil {
+			l.Errorw("Fail to connect to node", "rpc", wsRPC, "error", err)
+
+			return nil, err
+		}
+	} else {
+		// Use HTTP poller as a drop-in replacement for wsEVMClient
+		wsEVMClient = blockpoller.New(httpEVMClient, pollIntervalFlag.Value)
+		l.Infow("Using HTTP block poller", "rpc", httpRPC, "interval", pollIntervalFlag.Value.String())
 	}
 
 	l.Infow("Get chainID from node")

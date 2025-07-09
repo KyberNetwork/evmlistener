@@ -14,6 +14,12 @@ var (
 		Value:   "info",
 		Usage:   "Set log level for logger, values: debug, info, warn, error. Default: info",
 	}
+	pollIntervalFlag = &cli.DurationFlag{
+		Name:    "poll-interval",
+		EnvVars: []string{"POLL_INTERVAL"},
+		Value:   time.Second,
+		Usage:   "Interval for polling new blocks, default: 1s",
+	}
 	wsRPCFlag = &cli.StringFlag{
 		Name:    "ws-rpc",
 		EnvVars: []string{"WS_RPC"},

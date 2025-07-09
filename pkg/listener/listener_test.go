@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KyberNetwork/evmlistener/pkg/block"
-	"github.com/KyberNetwork/evmlistener/pkg/encoder"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
+
+	"github.com/KyberNetwork/evmlistener/pkg/block"
+	"github.com/KyberNetwork/evmlistener/pkg/encoder"
 )
 
 type ListenerTestSuite struct {
