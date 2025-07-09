@@ -85,7 +85,8 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		}
 	} else {
 		// Use HTTP poller as a drop-in replacement for wsEVMClient
-		wsEVMClient = blockpoller.New(httpEVMClient, time.Second)
+		wsEVMClient = blockpoller.New(httpEVMClient, pollIntervalFlag.Value)
+		l.Infow("Using HTTP block poller", "rpc", httpRPC, "interval", pollIntervalFlag.Value.String())
 	}
 
 	l.Infow("Get chainID from node")
