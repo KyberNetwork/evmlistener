@@ -5,14 +5,16 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
+
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/ethereum/go-ethereum"
 )
 
 const (
-	errStringUnknownBlock = "unknown block"
+	errStringUnknownBlock   = "unknown block"
+	errStringResponseTooBig = "Response is too big"
 
 	defaultRetryInterval = 500 * time.Millisecond
 )
@@ -21,7 +23,7 @@ const (
 func getLogsByBlockHash(ctx context.Context, evmClient evmclient.IClient, hash string,
 	contracts []string, topics [][]string,
 ) (logs []types.Log, err error) {
-	for range 5 {
+	for range 3 {
 		logs, err = evmClient.FilterLogs(ctx, evmclient.FilterQuery{
 			BlockHash: &hash,
 			Addresses: contracts,
@@ -33,9 +35,9 @@ func getLogsByBlockHash(ctx context.Context, evmClient evmclient.IClient, hash s
 			}
 
 			return logs, nil
-		}
-
-		if !errors.Is(err, ethereum.NotFound) && err.Error() != errStringUnknownBlock {
+		} else if err.Error() == errStringResponseTooBig {
+			return nil, nil
+		} else if !errors.Is(err, ethereum.NotFound) && err.Error() != errStringUnknownBlock {
 			return nil, err
 		}
 
