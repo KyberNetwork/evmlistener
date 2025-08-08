@@ -78,6 +78,48 @@ func (ts *RedisBlockKeeperTestSuite) TestAdd() {
 	ts.Assert().ErrorIs(err, errors.ErrAlreadyExists)
 }
 
+func (ts *RedisBlockKeeperTestSuite) TestDelete() {
+	block := types.Block{
+		Number:     big.NewInt(35338115),
+		Hash:       "0xf11b9c19c31319321e6730754f4fe1746f24d1b6ca925d30622059e6a5d79450",
+		ParentHash: "0x9a24538f47e0c6faa56732a0c3f1f036bea5372a57369c3ecef1423972957c6a",
+		Logs: []types.Log{
+			{
+				Address:     "0x123",
+				Topics:      []string{"0x456"},
+				Data:        []byte{1, 2, 3},
+				BlockNumber: 35338115,
+				TxHash:      "0x789",
+				TxIndex:     0,
+				BlockHash:   "0xf11b9c19c31319321e6730754f4fe1746f24d1b6ca925d30622059e6a5d79450",
+				Index:       0,
+				Removed:     false,
+			},
+		},
+	}
+
+	err := ts.keeper.Add(block)
+	ts.Assert().NoError(err)
+
+	// Verify block exists before deletion
+	exists, err := ts.keeper.Exists(block.Hash)
+	ts.Assert().NoError(err)
+	ts.Assert().True(exists, "Block should exist before deletion")
+
+	// Delete the block
+	err = ts.keeper.Delete(block.Hash)
+	ts.Assert().NoError(err)
+
+	// Check if block exists in memory
+	exists, err = ts.keeper.Exists(block.Hash)
+	ts.Assert().NoError(err)
+	ts.Assert().False(exists, "Block should not exist in memory after deletion")
+
+	// Test deleting a non-existent block
+	err = ts.keeper.Delete("0xabc")
+	ts.Assert().ErrorIs(err, errors.ErrNotFound)
+}
+
 func TestRedisBlockKeeperTestSuite(t *testing.T) {
 	suite.Run(t, new(RedisBlockKeeperTestSuite))
 }

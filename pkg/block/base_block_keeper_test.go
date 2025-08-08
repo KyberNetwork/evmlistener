@@ -93,6 +93,36 @@ func (ts *BaseBlockKeeperTestSuite) TestAdd() {
 	}
 }
 
+func (ts *BaseBlockKeeperTestSuite) TestDelete() {
+	keeper := NewBaseBlockKeeper(2)
+	n := keeper.Len()
+	ts.Assert().Equal(0, n)
+
+	err := keeper.Add(sampleBlocks[0])
+	if ts.Assert().NoError(err) {
+		n = keeper.Len()
+		ts.Assert().Equal(1, n)
+	}
+
+	err = keeper.Add(sampleBlocks[1])
+	if ts.Assert().NoError(err) {
+		n = keeper.Len()
+		ts.Assert().Equal(2, n)
+	}
+
+	err = keeper.Delete(sampleBlocks[0].Hash)
+	ts.Assert().NoError(err)
+	n = keeper.Len()
+	ts.Assert().Equal(1, n)
+
+	exists, err := keeper.Exists(sampleBlocks[0].Hash)
+	ts.Assert().NoError(err)
+	ts.Assert().False(exists)
+
+	err = keeper.Delete("0xabc")
+	ts.Assert().ErrorIs(err, errors.ErrNotFound)
+}
+
 func (ts *BaseBlockKeeperTestSuite) TestExists() {
 	tests := []struct {
 		hash   string

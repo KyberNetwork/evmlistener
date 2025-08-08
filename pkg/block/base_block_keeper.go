@@ -111,6 +111,20 @@ func (k *BaseBlockKeeper) Add(block types.Block) error {
 	return nil
 }
 
+// Delete deletes a block from the keeper.
+func (k *BaseBlockKeeper) Delete(hash string) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
+	if !k.exists(hash) {
+		return fmt.Errorf("block %v: %w", hash, errors.ErrNotFound)
+	}
+
+	delete(k.blockMap, hash)
+
+	return nil
+}
+
 // Head returns the block head of the chain on the keeper.
 func (k *BaseBlockKeeper) Head() (types.Block, error) {
 	k.mu.RLock()
