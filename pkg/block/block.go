@@ -12,6 +12,7 @@ type Keeper interface {
 	Len() int
 	Cap() int
 	Add(b types.Block) error
+	Delete(hash string) error
 	Exists(hash string) (bool, error)
 	Head() (types.Block, error)
 	Get(hash string) (types.Block, error)

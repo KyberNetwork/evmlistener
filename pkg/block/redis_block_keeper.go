@@ -136,6 +136,20 @@ func (k *RedisBlockKeeper) Add(block types.Block) error {
 	return k.BaseBlockKeeper.Add(block)
 }
 
+// Delete deletes a block from the keeper and redis.
+func (k *RedisBlockKeeper) Delete(hash string) error {
+	// Delete block from redis
+	if err := k.redisClient.Del(context.Background(), hash).Err(); err != nil {
+		k.l.Errorw("Fail to delete block from redis", "hash", hash, "error", err)
+
+		return err
+	}
+
+	_ = k.BaseBlockKeeper.Delete(hash)
+
+	return nil
+}
+
 // Get ...
 func (k *RedisBlockKeeper) Get(hash string) (b types.Block, err error) {
 	b, err = k.BaseBlockKeeper.Get(hash)

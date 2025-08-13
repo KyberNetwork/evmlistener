@@ -161,6 +161,11 @@ func (h *Handler) findReorgBlocks(
 
 	for {
 		if storedNumber >= newNumber {
+			storedBlock.ReorgedHash = newBlock.Hash
+			for i := range storedBlock.Logs {
+				storedBlock.Logs[i].Removed = true
+			}
+
 			reorgBlocks = append(reorgBlocks, storedBlock)
 			storedBlock, err = h.blockKeeper.Get(storedBlock.ParentHash)
 			if err != nil {
@@ -265,6 +270,16 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 		log.Errorw("Fail to publish message", "error", err)
 
 		return err
+	}
+
+	// Delete reverted blocks from block keeper.
+	for _, b := range revertedBlocks {
+		err = h.blockKeeper.Delete(b.Hash)
+		if err != nil && !errors.Is(err, errors.ErrNotFound) {
+			h.l.Errorw("Fail to delete block", "hash", b.Hash, "error", err)
+
+			return err
+		}
 	}
 
 	// Add new blocks into block keeper.

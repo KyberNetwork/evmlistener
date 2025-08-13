@@ -6,6 +6,7 @@ import (
 
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/encoder"
+	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	ltypes "github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -163,4 +164,75 @@ func (ts *HandlerTestSuite) TestHandle() {
 
 func TestHandlerTestSuite(t *testing.T) {
 	suite.Run(t, new(HandlerTestSuite))
+}
+
+func (ts *HandlerTestSuite) TestHandleWithRevertedBlocks() {
+	ts.evmClient.SetHead(44)
+
+	err := ts.handler.Init(context.Background())
+	ts.Require().NoError(err)
+
+	// Get the current head block
+	head, err := ts.blockKeeper.Head()
+	ts.Require().NoError(err)
+
+	for _, log := range head.Logs {
+		ts.Assert().False(log.Removed, "Log should not be marked as removed initially")
+	}
+
+	ts.evmClient.Next()
+	hash := "0xc0c29448be86bca9d0db94b79cd1a6bd1361aed1e394d3a2a218fb98b159ab74"
+	b, err := getBlockByHash(context.Background(), ts.evmClient, hash, true, nil, nil)
+	ts.Require().NoError(err)
+
+	err = ts.handler.Handle(context.Background(), b)
+	ts.Require().NoError(err)
+
+	ts.evmClient.SetHead(52)
+	hash = "0x132c1eb1799a5219b055674177ba95e946feb5f011c7c1409630d42c0581ee52"
+	b, err = getBlockByHash(context.Background(), ts.evmClient, hash, true, nil, nil)
+	ts.Require().NoError(err)
+
+	err = ts.handler.Handle(context.Background(), b)
+	ts.Require().NoError(err)
+
+	// Get the last message from the channel
+	ts.Require().GreaterOrEqual(len(ts.publisher.ch), 1)
+
+	var msg ltypes.Message
+	for len(ts.publisher.ch) > 0 {
+		data := <-ts.publisher.ch
+		if m, ok := data.(ltypes.Message); ok {
+			msg = m
+		}
+	}
+
+	// Check reverted blocks
+	if len(msg.RevertedBlocks) > 0 {
+		expectedReorgHash := ""
+		if len(msg.NewBlocks) > 0 {
+			expectedReorgHash = msg.NewBlocks[0].Hash
+		}
+
+		for _, revertedBlock := range msg.RevertedBlocks {
+			ts.Assert().Equal(expectedReorgHash, revertedBlock.ReorgedHash, "ReorgedHash should be set to the new head block")
+
+			for _, log := range revertedBlock.Logs {
+				ts.Assert().True(log.Removed, "Log in reverted block should be marked as removed")
+			}
+		}
+
+		// Verify blocks are deleted
+		for _, revertedBlock := range msg.RevertedBlocks {
+			_, err := ts.blockKeeper.Get(revertedBlock.Hash)
+			ts.Assert().ErrorIs(err, errors.ErrNotFound, "Reverted block should be deleted from blockKeeper")
+		}
+	}
+
+	// Check new blocks
+	for _, newBlock := range msg.NewBlocks {
+		for _, log := range newBlock.Logs {
+			ts.Assert().False(log.Removed, "Log in new block should not be marked as removed")
+		}
+	}
 }
