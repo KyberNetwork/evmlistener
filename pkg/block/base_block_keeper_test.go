@@ -110,7 +110,9 @@ func (ts *BaseBlockKeeperTestSuite) TestDelete() {
 		ts.Assert().Equal(2, n)
 	}
 
-	keeper.Delete(sampleBlocks[0].Hash)
+	err = keeper.Delete(sampleBlocks[0].Hash)
+	ts.Assert().NoError(err)
+
 	n = keeper.Len()
 	ts.Assert().Equal(1, n)
 
