@@ -110,17 +110,13 @@ func (ts *BaseBlockKeeperTestSuite) TestDelete() {
 		ts.Assert().Equal(2, n)
 	}
 
-	err = keeper.Delete(sampleBlocks[0].Hash)
-	ts.Assert().NoError(err)
+	keeper.Delete(sampleBlocks[0].Hash)
 	n = keeper.Len()
 	ts.Assert().Equal(1, n)
 
 	exists, err := keeper.Exists(sampleBlocks[0].Hash)
 	ts.Assert().NoError(err)
 	ts.Assert().False(exists)
-
-	err = keeper.Delete("0xabc")
-	ts.Assert().ErrorIs(err, errors.ErrNotFound)
 }
 
 func (ts *BaseBlockKeeperTestSuite) TestExists() {

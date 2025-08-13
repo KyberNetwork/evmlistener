@@ -158,7 +158,9 @@ func (k *RedisBlockKeeper) Delete(hash string) error {
 		return err
 	}
 
-	return k.BaseBlockKeeper.Delete(hash)
+	k.BaseBlockKeeper.Delete(hash)
+
+	return nil
 }
 
 // Get ...

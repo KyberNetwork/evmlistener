@@ -116,10 +116,6 @@ func (k *BaseBlockKeeper) Delete(hash string) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
-	if !k.exists(hash) {
-		return fmt.Errorf("block %v: %w", hash, errors.ErrNotFound)
-	}
-
 	delete(k.blockMap, hash)
 
 	return nil
