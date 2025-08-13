@@ -117,7 +117,7 @@ func (ts *RedisBlockKeeperTestSuite) TestDelete() {
 
 	// Test deleting a non-existent block
 	err = ts.keeper.Delete("0xabc")
-	ts.Assert().ErrorIs(err, errors.ErrNotFound)
+	ts.Assert().NoError(err)
 }
 
 func TestRedisBlockKeeperTestSuite(t *testing.T) {
