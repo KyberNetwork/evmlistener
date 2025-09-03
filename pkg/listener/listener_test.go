@@ -2,6 +2,7 @@ package listener
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -58,7 +59,7 @@ func (ts *ListenerTestSuite) TestRun() {
 	cancel()
 	err := <-errCh
 
-	if ts.Assert().NoError(err) {
+	if ts.Assert().True(errors.Is(err, context.Canceled)) {
 		ts.Assert().Equal(11, len(ts.publisher.ch))
 	}
 
@@ -80,7 +81,7 @@ func (ts *ListenerTestSuite) TestRun() {
 	time.Sleep(100 * time.Millisecond)
 	cancel()
 	err = <-errCh
-	ts.Assert().NoError(err)
+	ts.Assert().True(errors.Is(err, context.Canceled))
 }
 
 func TestListenerTestSuite(t *testing.T) {

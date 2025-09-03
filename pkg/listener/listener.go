@@ -245,14 +245,17 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 	// Reset sliding window buffer.
 	seq := uint64(1)
 	l.queue.Clear()
-
 	lastReceivedTime := time.Now()
+	g, gctx := errgroup.WithContext(ctx)
 	for {
 		select {
-		case <-ctx.Done():
+		case <-gctx.Done():
+			if err := g.Wait(); err != nil {
+				return err
+			}
 			l.l.Infow("Stop subscribing for new head")
 
-			return nil
+			return gctx.Err()
 		case err = <-sub.Err():
 			l.l.Errorw("Error while subscribing new head", "error", err)
 
@@ -278,14 +281,20 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 			}
 			l.mu.Unlock()
 
-			go func(seq uint64, head *types.Header) {
-				b, err := l.handleNewHeader(ctx, head)
-				if err != nil {
-					l.l.Fatalw("Fail to handle new head", "header", header, "error", err)
-				}
+			seqLocal := seq
+			head := header
 
-				l.publishBlock(blockCh, seq, &b)
-			}(seq, header)
+			g.Go(func() error {
+				b, err := l.handleNewHeader(gctx, head)
+				if err != nil {
+					l.l.Errorw("Fail to handle new head", "header", head, "error", err)
+
+					return err
+				}
+				l.publishBlock(blockCh, seqLocal, &b)
+				
+				return nil
+			})
 
 			seq++
 		}
@@ -328,27 +337,32 @@ func (l *Listener) Run(ctx context.Context) error {
 
 	l.setResuming(true)
 
+	g, gctx := errgroup.WithContext(ctx)
 	// Start go routine for sanity checking.
-	go func() {
-		err := l.runSanityCheck(ctx)
+	g.Go(func() error {
+		err := l.runSanityCheck(gctx)
 		if err != nil {
-			l.l.Fatalw("Sanity check failed", "error", err)
+			l.l.Infow("Sanity check failed", "error", err)
+			return err
 		}
-	}()
+		return nil
+	})
 
 	// Synchronize blocks from node.
 	blockCh := make(chan types.Block, bufLen)
-	go func() {
-		returnErr = l.syncBlocks(ctx, blockCh)
+	g.Go(func() error {
+		returnErr = l.syncBlocks(gctx, blockCh)
 		if returnErr != nil {
 			l.l.Errorw("Fail to sync blocks", "error", returnErr)
+			close(blockCh)
+			return returnErr
 		}
-
 		close(blockCh)
-	}()
+		return nil
+	})
 
 	// Start metrics collector.
-	if err := l.startMetricsCollector(ctx); err != nil {
+	if err := l.startMetricsCollector(gctx); err != nil {
 		l.l.Errorw("Fail to start metrics collector", "error", err)
 
 		return err
@@ -358,22 +372,25 @@ func (l *Listener) Run(ctx context.Context) error {
 	}()
 
 	l.l.Info("Start handling for new blocks")
-	for b := range blockCh {
-		l.l.Debugw("Receive new block",
-			"hash", b.Hash, "parent", b.ParentHash, "numLogs", len(b.Logs))
-		err := l.handler.Handle(ctx, b)
-		if err != nil {
-			l.l.Errorw("Fail to handle new block", "hash", b.Hash, "error", err)
+	for {
+		select {
+		case <-gctx.Done():
+			return gctx.Err()
+		case b := <-blockCh:
+			l.l.Debugw("Receive new block",
+				"hash", b.Hash, "parent", b.ParentHash, "numLogs", len(b.Logs))
+			err := l.handler.Handle(gctx, b)
+			if err != nil {
+				l.l.Errorw("Fail to handle new block", "hash", b.Hash, "error", err)
 
-			return err
+				return err
+			}
+
+			l.mu.Lock()
+			l.lastHandledBlockNumber = b.Number
+			l.mu.Unlock()
 		}
-
-		l.mu.Lock()
-		l.lastHandledBlockNumber = b.Number
-		l.mu.Unlock()
 	}
-
-	return returnErr
 }
 
 func (l *Listener) startMetricsCollector(_ context.Context) error {
