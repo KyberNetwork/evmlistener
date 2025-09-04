@@ -380,7 +380,10 @@ func (l *Listener) Run(ctx context.Context) error {
 		select {
 		case <-gctx.Done():
 			return gctx.Err()
-		case b := <-blockCh:
+		case b, ok := <-blockCh:
+			if !ok {
+				return nil
+			}
 			l.l.Debugw("Receive new block",
 				"hash", b.Hash, "parent", b.ParentHash, "numLogs", len(b.Logs))
 			err := l.handler.Handle(gctx, b)
