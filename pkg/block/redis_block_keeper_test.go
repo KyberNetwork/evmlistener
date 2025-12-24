@@ -8,11 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap"
+
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/redis"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 )
 
 type RedisBlockKeeperTestSuite struct {

@@ -40,26 +40,18 @@ type IClient interface {
 }
 
 type Client struct {
-	chainID      uint64
 	ethClient    *ethclient.Client
 	customClient *commonclient.Client
 }
 
 func DialContext(ctx context.Context, rawurl string, httpClient *http.Client) (*Client, error) {
+	client := &Client{}
+
 	rpcClient, err := rpc.DialOptions(ctx, rawurl, rpc.WithHTTPClient(httpClient))
 	if err != nil {
 		return nil, err
 	}
-
 	ethClient := ethclient.NewClient(rpcClient)
-	chainID, err := ethClient.ChainID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	client := &Client{
-		chainID: chainID.Uint64(),
-	}
 
 	switch {
 	case UseCustomClient:
@@ -99,10 +91,6 @@ func DialContextWithTimeout(
 	case <-time.After(timeout):
 		return nil, errors.New("timeout when dial RPC")
 	}
-}
-
-func (c *Client) ChainID(_ context.Context) (*big.Int, error) {
-	return new(big.Int).SetUint64(c.chainID), nil
 }
 
 func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {

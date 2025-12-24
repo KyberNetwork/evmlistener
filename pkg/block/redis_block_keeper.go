@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/redis"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"go.uber.org/zap"
 )
 
 const (

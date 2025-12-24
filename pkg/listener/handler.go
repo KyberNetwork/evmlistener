@@ -5,13 +5,14 @@ import (
 	"math/big"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/encoder"
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/publisher"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"go.uber.org/zap"
 )
 
 type HandlerConfig struct {

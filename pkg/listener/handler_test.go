@@ -4,12 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap"
+
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/encoder"
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	ltypes "github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 )
 
 type HandlerTestSuite struct {
