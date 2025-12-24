@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/emirpasic/gods/queues/circularbuffer"
+
 	"github.com/KyberNetwork/evmlistener/pkg/errors"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/emirpasic/gods/queues/circularbuffer"
 )
 
 const zeroHash = "0x0000000000000000000000000000000000000000000000000000000000000000"

@@ -89,16 +89,6 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 		l.Infow("Using HTTP block poller", "rpc", httpRPC, "interval", pollIntervalFlag.Value.String())
 	}
 
-	l.Infow("Get chainID from node")
-	chainID, err := httpEVMClient.ChainID(c.Context)
-	if err != nil {
-		l.Errorw("Fail to get chainID", "error", err)
-
-		return nil, err
-	}
-
-	l = l.With("chainID", chainID.Int64())
-
 	sanityCheckInterval := sanityCheckIntervalFlag.Value
 	var sanityEVMClient evmclient.IClient
 	sanityRPC := sanityNodeRPCFlag.Value
