@@ -19,6 +19,48 @@ const (
 	defaultRetryInterval = 500 * time.Millisecond
 )
 
+// filterSpamLogs drops all but the last log for any (address, topic0) pair that appears more than
+// threshold times in the slice. Order of surviving logs is preserved.
+func filterSpamLogs(logs []types.Log, threshold int) []types.Log {
+	type key struct{ addr, topic0 string }
+
+	counts := make(map[key]int, len(logs))
+	for _, l := range logs {
+		if len(l.Topics) == 0 {
+			continue
+		}
+		counts[key{l.Address, l.Topics[0]}]++
+	}
+
+	// For each over-threshold key, record the index of its last occurrence.
+	lastIdx := make(map[key]int)
+	for i, l := range logs {
+		if len(l.Topics) == 0 {
+			continue
+		}
+		k := key{l.Address, l.Topics[0]}
+		if counts[k] > threshold {
+			lastIdx[k] = i
+		}
+	}
+
+	if len(lastIdx) == 0 {
+		return logs
+	}
+
+	filtered := make([]types.Log, 0, len(logs))
+	for i, l := range logs {
+		if len(l.Topics) > 0 {
+			k := key{l.Address, l.Topics[0]}
+			if last, isSpam := lastIdx[k]; isSpam && i != last {
+				continue
+			}
+		}
+		filtered = append(filtered, l)
+	}
+	return filtered
+}
+
 // getLogsByBlockHash returns logs by block hash, retry up to 3 times.
 func getLogsByBlockHash(ctx context.Context, evmClient evmclient.IClient, hash string,
 	contracts []string, topics [][]string,

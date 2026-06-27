@@ -251,6 +251,12 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 		newBlocks = []types.Block{b}
 	}
 
+	if h.option.spamLogThreshold > 0 {
+		for i := range newBlocks {
+			newBlocks[i].Logs = filterSpamLogs(newBlocks[i].Logs, h.option.spamLogThreshold)
+		}
+	}
+
 	log.Infow("Publish message to queue",
 		"topic", h.topic,
 		"numRevertedBlocks", len(revertedBlocks),

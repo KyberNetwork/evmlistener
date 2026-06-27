@@ -189,6 +189,12 @@ var (
 		Value:   24 * time.Hour, //nolint:gomnd
 		Usage:   "Expiration time for storing block into datastore. Default: 24h",
 	}
+	spamLogThresholdFlag = &cli.IntFlag{
+		Name:    "spam-log-threshold",
+		EnvVars: []string{"SPAM_LOG_THRESHOLD"},
+		Value:   0,
+		Usage:   "Drop all but the last log per (address, topic0) when count exceeds this threshold per block. 0 disables the filter.",
+	}
 )
 
 // NewSentryFlags returns flags to init sentry client.
@@ -230,6 +236,11 @@ func NewBlockKeeperFlags() []cli.Flag {
 	return []cli.Flag{maxNumBlocksFlag, blockExpirationFlag}
 }
 
+// NewListenerFlags returns miscellaneous listener flags.
+func NewListenerFlags() []cli.Flag {
+	return []cli.Flag{spamLogThresholdFlag}
+}
+
 // NewFlags returns all flags for the application.
 func NewFlags() []cli.Flag {
 	flags := []cli.Flag{
@@ -248,6 +259,7 @@ func NewFlags() []cli.Flag {
 	flags = append(flags, NewEncoderFlags()...)
 	flags = append(flags, NewPublisherFlags()...)
 	flags = append(flags, NewBlockKeeperFlags()...)
+	flags = append(flags, NewListenerFlags()...)
 
 	return flags
 }
