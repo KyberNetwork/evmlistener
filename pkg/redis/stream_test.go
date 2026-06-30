@@ -6,8 +6,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/KyberNetwork/evmlistener/pkg/encoder"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/KyberNetwork/evmlistener/pkg/encoder"
 )
 
 type StreamTestSuite struct {

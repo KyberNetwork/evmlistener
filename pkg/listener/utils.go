@@ -38,7 +38,11 @@ func filterSpamLogs(logs []types.Log, threshold int) []types.Log {
 		return k
 	}
 
-	counts := make(map[key]int, len(logs))
+	if len(logs) <= threshold {
+		return logs
+	}
+
+	counts := make(map[key]int)
 	for _, l := range logs {
 		counts[keyOf(l)]++
 	}

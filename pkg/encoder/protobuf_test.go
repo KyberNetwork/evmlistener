@@ -4,9 +4,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/KyberNetwork/evmlistener/protobuf/pb"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestProtobufEncoder(t *testing.T) {

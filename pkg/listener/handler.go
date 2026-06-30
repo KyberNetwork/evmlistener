@@ -255,6 +255,9 @@ func (h *Handler) handleNewBlock(ctx context.Context, b types.Block) error {
 		for i := range newBlocks {
 			newBlocks[i].Logs = filterSpamLogs(newBlocks[i].Logs, h.option.spamLogThreshold)
 		}
+		for i := range revertedBlocks {
+			revertedBlocks[i].Logs = filterSpamLogs(revertedBlocks[i].Logs, h.option.spamLogThreshold)
+		}
 	}
 
 	log.Infow("Publish message to queue",
