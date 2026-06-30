@@ -3,8 +3,9 @@ package types
 import (
 	"math/big"
 
-	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 )
 
 // Header contains block header information.

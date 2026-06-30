@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 )
 
 // Log contains log information.

@@ -129,9 +129,14 @@ func NewListener(c *cli.Context) (*listener.Listener, error) {
 	msgEncoder := getMessageEncoder()
 
 	l.Infow("Setup handler", "topic", topic)
+	handlerOpts := []listener.Option{listener.WithEventLogs(nil, nil)}
+	if spamThreshold := c.Int(spamLogThresholdFlag.Name); spamThreshold > 0 {
+		l.Infow("Spam log filter enabled", "threshold", spamThreshold)
+		handlerOpts = append(handlerOpts, listener.WithSpamLogThreshold(spamThreshold))
+	}
 	handler := listener.NewHandler(listener.HandlerConfig{BlockSlowWarningThreshold: blockSlowWarningThresholdFlag.Value},
 		l, topic, httpEVMClient, blockKeeper, publisher, msgEncoder,
-		listener.WithEventLogs(nil, nil))
+		handlerOpts...)
 
 	l.Infow("Setup listener")
 

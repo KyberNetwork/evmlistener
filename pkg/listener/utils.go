@@ -19,6 +19,57 @@ const (
 	defaultRetryInterval = 500 * time.Millisecond
 )
 
+// filterSpamLogs drops all but the last log for any spam key that appears more than threshold
+// times in the slice. The key is (address, topic0, topic1) for events with topics, or (address)
+// alone for anonymous events (no topics). This lets through Uniswap V4 / Balancer vault events
+// where topic1 carries the pool ID and differs per pool, while catching mass-transfer airdrops
+// (same from-address in topic1) and anonymous event spam. Order of surviving logs is preserved.
+func filterSpamLogs(logs []types.Log, threshold int) []types.Log {
+	type key struct{ addr, topic0, topic1 string }
+
+	keyOf := func(l types.Log) key {
+		k := key{addr: l.Address}
+		if len(l.Topics) > 0 {
+			k.topic0 = l.Topics[0]
+		}
+		if len(l.Topics) > 1 {
+			k.topic1 = l.Topics[1]
+		}
+		return k
+	}
+
+	if len(logs) <= threshold {
+		return logs
+	}
+
+	counts := make(map[key]int)
+	for _, l := range logs {
+		counts[keyOf(l)]++
+	}
+
+	// For each over-threshold key, record the index of its last occurrence.
+	lastIdx := make(map[key]int)
+	for i, l := range logs {
+		k := keyOf(l)
+		if counts[k] > threshold {
+			lastIdx[k] = i
+		}
+	}
+
+	if len(lastIdx) == 0 {
+		return logs
+	}
+
+	filtered := make([]types.Log, 0, len(logs))
+	for i, l := range logs {
+		if last, isSpam := lastIdx[keyOf(l)]; isSpam && i != last {
+			continue
+		}
+		filtered = append(filtered, l)
+	}
+	return filtered
+}
+
 // getLogsByBlockHash returns logs by block hash, retry up to 3 times.
 func getLogsByBlockHash(ctx context.Context, evmClient evmclient.IClient, hash string,
 	contracts []string, topics [][]string,

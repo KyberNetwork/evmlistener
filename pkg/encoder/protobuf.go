@@ -3,8 +3,9 @@ package encoder
 import (
 	"errors"
 
-	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/KyberNetwork/evmlistener/protobuf/pb"
 )
 
 type ProtobufEncoder struct{}
