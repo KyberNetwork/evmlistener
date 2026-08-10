@@ -154,6 +154,7 @@ func getPublisher(c *cli.Context, redisClient *redis.Client, topic string) (publ
 		config := &kafka.Config{
 			Addresses:         kafkaAddrsFlag.Get(c),
 			UseAuthentication: kafkaUseAuthenticationFlag.Value,
+			SASLMechanism:     kafkaSASLMechanismFlag.Get(c),
 			Username:          kafkaUsernameFlag.Value,
 			Password:          kafkaPasswordFlag.Value,
 		}

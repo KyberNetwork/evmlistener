@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/IBM/sarama"
+	"github.com/xdg-go/scram"
+	"go.uber.org/zap"
 )
 
 type Publisher struct {
@@ -33,6 +35,15 @@ func NewPublisher(config *Config) (*Publisher, error) {
 	c.Net.SASL.Enable = config.UseAuthentication
 	c.Net.SASL.User = config.Username
 	c.Net.SASL.Password = config.Password
+
+	if config.UseAuthentication && config.SASLMechanism == sarama.SASLTypeSCRAMSHA512 {
+		zap.S().Info("[kafka] using SASL/SCRAM-SHA-512 authentication")
+
+		c.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
+		c.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+			return &XDGSCRAMClient{HashGeneratorFcn: scram.SHA512}
+		}
+	}
 
 	// Use SyncProducer since we want to ensure the message is published.
 	producer, err := sarama.NewSyncProducer(config.Addresses, c)

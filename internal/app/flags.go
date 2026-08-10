@@ -147,6 +147,12 @@ var (
 		Value:   "",
 		Usage:   "Password for authenticating with kafka brokers",
 	}
+	kafkaSASLMechanismFlag = &cli.StringFlag{
+		Name:    "kafka-sasl-mechanism",
+		EnvVars: []string{"KAFKA_SASL_MECHANISM"},
+		Value:   "",
+		Usage:   "SASL mechanism for authenticating with kafka brokers. Supports: `SCRAM-SHA-512`, PLAIN (default)",
+	}
 
 	encoderTypeFlag = &cli.StringFlag{
 		Name:     "encoder-type",
@@ -218,6 +224,7 @@ func NewKafkaFlags() []cli.Flag {
 		kafkaUseAuthenticationFlag,
 		kafkaUsernameFlag,
 		kafkaPasswordFlag,
+		kafkaSASLMechanismFlag,
 	}
 }
 
