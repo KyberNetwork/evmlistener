@@ -270,6 +270,10 @@ func (c *EVMClientMock) HeaderByHash(ctx context.Context, hash string) (*types.H
 	}, nil
 }
 
+func (c *EVMClientMock) Shutdown() error {
+	return nil
+}
+
 func (c *EVMClientMock) NotifyDisconnect(err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

@@ -37,6 +37,7 @@ type IClient interface {
 	FilterLogs(context.Context, FilterQuery) ([]types.Log, error)
 	HeaderByHash(context.Context, string) (*types.Header, error)
 	HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
+	Shutdown() error
 }
 
 type Client struct {
@@ -91,6 +92,18 @@ func DialContextWithTimeout(
 	case <-time.After(timeout):
 		return nil, errors.New("timeout when dial RPC")
 	}
+}
+
+func (c *Client) Shutdown() error {
+	if c.customClient != nil {
+		return c.customClient.Shutdown()
+	}
+
+	if c.ethClient != nil {
+		c.ethClient.Close()
+	}
+
+	return nil
 }
 
 func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
