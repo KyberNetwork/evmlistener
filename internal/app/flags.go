@@ -104,6 +104,18 @@ var (
 		Value:   "",
 		Usage:   "Password for authenticating with redis server",
 	}
+	redisSentinelUsernameFlag = &cli.StringFlag{
+		Name:    "redis-sentinel-username",
+		EnvVars: []string{"REDIS_SENTINEL_USERNAME"},
+		Value:   "",
+		Usage:   "Username for authenticating with redis sentinel",
+	}
+	redisSentinelPasswordFlag = &cli.StringFlag{
+		Name:    "redis-sentinel-password",
+		EnvVars: []string{"REDIS_SENTINEL_PASSWORD"},
+		Value:   "",
+		Usage:   "Password for authenticating with redis sentinel",
+	}
 	redisKeyPrefixFlag = &cli.StringFlag{
 		Name:    "redis-key-prefix",
 		EnvVars: []string{"REDIS_KEY_PREFIX"},
@@ -212,7 +224,8 @@ func NewSentryFlags() []cli.Flag {
 func NewRedisFlags() []cli.Flag {
 	return []cli.Flag{
 		redisMasterNameFlag, redisAddrsFlag, redisDBFlag,
-		redisUsernameFlag, redisPasswordFlag, redisKeyPrefixFlag,
+		redisUsernameFlag, redisPasswordFlag,
+		redisSentinelUsernameFlag, redisSentinelPasswordFlag, redisKeyPrefixFlag,
 		redisReadTimeoutFlag, redisWriteTimeoutFlag,
 	}
 }
