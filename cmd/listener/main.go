@@ -43,7 +43,13 @@ func run(c *cli.Context) error {
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
+	defer func() {
+		stop()
+
+		if err := listener.Shutdown(); err != nil {
+			l.Errorw("Fail to shutdown listener service", "error", err)
+		}
+	}()
 
 	return listener.Run(ctx)
 }

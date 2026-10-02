@@ -21,7 +21,7 @@ env:
 
 jobs:
   prepare:
-    runs-on: [ubuntu-22.04]
+    runs-on: [self-hosted]
     outputs:
       current_branch: ${{ steps.current_branch.outputs.value }}
       head_sha: ${{ steps.head_sha.outputs.value }}
@@ -30,7 +30,7 @@ jobs:
       branch_tag: ${{ steps.get_tag.outputs.branch_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Extract branch
         shell: bash
@@ -71,18 +71,18 @@ jobs:
 
   lint:
     name: Run golangci-lint
-    runs-on: [ubuntu-22.04]
+    runs-on: [self-hosted]
     needs:
       - prepare
     steps:
       - name: Install Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v7
         with:
           go-version: "1.22.x"
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v9
         with:
           version: v1.59.1
           args: --config=.golangci.yml --timeout=5m
@@ -90,7 +90,7 @@ jobs:
           skip-build-cache: true
 
   test:
-    runs-on: [ubuntu-22.04]
+    runs-on: [self-hosted]
     needs:
       - prepare
     services:
@@ -100,9 +100,9 @@ jobs:
           - 6379:6379
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Install Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v7
         with:
           go-version: "1.22.x"
       - name: Run test
@@ -111,23 +111,23 @@ jobs:
   build:
     if:
       ${{ contains(github.ref, 'refs/heads/main') || contains(github.ref, 'refs/heads/release') }}
-    runs-on: [ubuntu-22.04]
+    runs-on: [self-hosted]
     needs:
       - prepare
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@master
+        uses: docker/setup-buildx-action@v4
 
       - name: Gcloud Auth
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: '${{ secrets.GCR_CREDENTIALS }}'
 
       - name: Setup Gcloud SDK
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Configure docker
         run: gcloud auth configure-docker
@@ -139,10 +139,10 @@ jobs:
           key: ${{ runner.os }}-${{ env.SERVICE }}-buildx
 
       - name: Docker build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v7
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           labels: |
             kyber.network.schema-version=1.0
             kyber.network.vcs-ref=${{ github.sha }}
