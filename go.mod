@@ -1,6 +1,6 @@
 module github.com/KyberNetwork/evmlistener
 
-go 1.22.7
+go 1.27
 
 require (
 	github.com/IBM/sarama v1.42.1

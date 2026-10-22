@@ -3,6 +3,7 @@ package block
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"go.uber.org/zap"
@@ -90,8 +91,7 @@ func (k *RedisBlockKeeper) Init() error {
 		return nil
 	}
 
-	for i := len(blocks) - 1; i >= 0; i-- {
-		block := blocks[i]
+	for _, block := range slices.Backward(blocks) {
 		err = k.BaseBlockKeeper.Add(block)
 		if err != nil {
 			k.l.Errorw("Fail to store block on memory",

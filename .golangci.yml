@@ -5,3 +5,9 @@ run:
 
 linters:
   default: standard
+  exclusions:
+    rules:
+      # Explicit embedded-field selectors are intentional in wrapper types.
+      - linters:
+          - staticcheck
+        text: QF1008

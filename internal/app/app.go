@@ -37,12 +37,12 @@ func redisConfigFromCli(c *cli.Context) redis.Config {
 		KeyPrefix:    redisKeyPrefixFlag.Value,
 		ReadTimeout:  redisReadTimeoutFlag.Value,
 		WriteTimeout: redisWriteTimeoutFlag.Value,
-	}
 
-	cfg.SentinelUsername = redisSentinelUsernameFlag.Value
-	cfg.SentinelPassword = redisSentinelPasswordFlag.Value
-	cfg.Username = redisUsernameFlag.Value
-	cfg.Password = redisPasswordFlag.Value
+		SentinelUsername: redisSentinelUsernameFlag.Value,
+		SentinelPassword: redisSentinelPasswordFlag.Value,
+		Username:         redisUsernameFlag.Value,
+		Password:         redisPasswordFlag.Value,
+	}
 
 	return cfg
 }
