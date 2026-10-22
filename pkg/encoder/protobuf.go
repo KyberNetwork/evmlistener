@@ -18,7 +18,7 @@ func NewProtobufEncoder() *ProtobufEncoder {
 	return &ProtobufEncoder{}
 }
 
-func (e *ProtobufEncoder) Encode(data interface{}) ([]byte, error) {
+func (e *ProtobufEncoder) Encode(data any) ([]byte, error) {
 	cast, ok := data.(ProtobufMessage)
 	if !ok {
 		return nil, errors.New("mistype when encode with protobuf")
@@ -27,7 +27,7 @@ func (e *ProtobufEncoder) Encode(data interface{}) ([]byte, error) {
 	return proto.Marshal(cast.ToProtobuf())
 }
 
-func (e *ProtobufEncoder) Decode(data []byte, v interface{}) error {
+func (e *ProtobufEncoder) Decode(data []byte, v any) error {
 	cast, ok := v.(proto.Message)
 	if !ok {
 		return errors.New("mistype when decode with protobuf")

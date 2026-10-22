@@ -55,7 +55,7 @@ func New(cfg Config) (*Client, error) {
 }
 
 // Set ...
-func (c *Client) Set(ctx context.Context, key string, v interface{}, exp time.Duration) error {
+func (c *Client) Set(ctx context.Context, key string, v any, exp time.Duration) error {
 	k := FormatKey(c.config.KeyPrefix, key)
 
 	data, err := Encode(v)
@@ -67,7 +67,7 @@ func (c *Client) Set(ctx context.Context, key string, v interface{}, exp time.Du
 }
 
 // Get ...
-func (c *Client) Get(ctx context.Context, key string, o interface{}) error {
+func (c *Client) Get(ctx context.Context, key string, o any) error {
 	k := FormatKey(c.config.KeyPrefix, key)
 	data, err := c.UniversalClient.Get(ctx, k).Result()
 	if err != nil {

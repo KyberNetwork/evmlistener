@@ -8,10 +8,10 @@ func NewJSONEncoder() *JSONEncoder {
 	return &JSONEncoder{}
 }
 
-func (e *JSONEncoder) Encode(data interface{}) ([]byte, error) {
+func (e *JSONEncoder) Encode(data any) ([]byte, error) {
 	return json.Marshal(data)
 }
 
-func (e *JSONEncoder) Decode(data []byte, v interface{}) error {
+func (e *JSONEncoder) Decode(data []byte, v any) error {
 	return json.Unmarshal(data, v)
 }
