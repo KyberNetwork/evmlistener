@@ -212,3 +212,8 @@ func toBlockNumArg(number *big.Int) string {
 
 	return hexutil.EncodeBig(number)
 }
+
+func (c *Client) Shutdown() error {
+	c.Client.Close()
+	return nil
+}

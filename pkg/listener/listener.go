@@ -2,6 +2,7 @@ package listener
 
 import (
 	"context"
+	stderrors "errors"
 	"math/big"
 	"sync"
 	"syscall"
@@ -46,6 +47,8 @@ type Listener struct {
 	lastHandledBlockNumber *big.Int
 	lastCheckedBlockNumber *big.Int
 	resuming               bool
+
+	wg sync.WaitGroup
 
 	queue       *Queue
 	maxQueueLen int
@@ -278,10 +281,19 @@ func (l *Listener) subscribeNewBlockHead(ctx context.Context, blockCh chan<- typ
 			}
 			l.mu.Unlock()
 
+			l.wg.Add(1)
 			go func(seq uint64, head *types.Header) {
+				defer l.wg.Done()
+
 				b, err := l.handleNewHeader(ctx, head)
 				if err != nil {
-					l.l.Fatalw("Fail to handle new head", "header", header, "error", err)
+					if ctx.Err() != nil {
+						l.l.Infow("Drop new head handling due to shutdown", "header", head, "error", err)
+
+						return
+					}
+
+					l.l.Fatalw("Fail to handle new head", "header", head, "error", err)
 				}
 
 				l.publishBlock(blockCh, seq, &b)
@@ -329,9 +341,12 @@ func (l *Listener) Run(ctx context.Context) error {
 	l.setResuming(true)
 
 	// Start go routine for sanity checking.
+	l.wg.Add(1)
 	go func() {
+		defer l.wg.Done()
+
 		err := l.runSanityCheck(ctx)
-		if err != nil {
+		if err != nil && ctx.Err() == nil {
 			l.l.Fatalw("Sanity check failed", "error", err)
 		}
 	}()
@@ -344,6 +359,7 @@ func (l *Listener) Run(ctx context.Context) error {
 			l.l.Errorw("Fail to sync blocks", "error", returnErr)
 		}
 
+		l.wg.Wait()
 		close(blockCh)
 	}()
 
@@ -513,4 +529,29 @@ func (l *Listener) isResuming() bool {
 	defer l.mu.Unlock()
 
 	return l.resuming
+}
+
+func (l *Listener) Shutdown() error {
+	l.l.Info("Shutdown listener service")
+
+	var errs []error
+
+	if err := l.wsEVMClient.Shutdown(); err != nil {
+		l.l.Errorw("Fail to shutdown ws EVM client", "error", err)
+		errs = append(errs, err)
+	}
+
+	if err := l.httpEVMClient.Shutdown(); err != nil {
+		l.l.Errorw("Fail to shutdown http EVM client", "error", err)
+		errs = append(errs, err)
+	}
+
+	if l.sanityEVMClient != nil {
+		if err := l.sanityEVMClient.Shutdown(); err != nil {
+			l.l.Errorw("Fail to shutdown sanity EVM client", "error", err)
+			errs = append(errs, err)
+		}
+	}
+
+	return stderrors.Join(errs...)
 }
