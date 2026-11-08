@@ -1,17 +1,81 @@
 package evmclient
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 
 	"github.com/KyberNetwork/evmlistener/pkg/common"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
-func filterLogs(ctx context.Context, client ethereum.LogFilterer, q FilterQuery) ([]types.Log, error) {
-	logs, err := client.FilterLogs(ctx, toEthereumFilterQuery(q))
+// decodeLogs decodes an eth_getLogs result. Some nodes (e.g. Conduit on elysium) return
+// `"topics": null` for topic-less logs, which types.Log rejects. On error, retry per element
+// and drop only logs whose topics are absent/null; any other failure is returned unchanged.
+func decodeLogs(raw json.RawMessage) ([]ethtypes.Log, error) {
+	var logs []ethtypes.Log
+	err := json.Unmarshal(raw, &logs)
+	if err == nil {
+		return logs, nil
+	}
+
+	var elems []json.RawMessage
+	if json.Unmarshal(raw, &elems) != nil {
+		return nil, err
+	}
+
+	logs = make([]ethtypes.Log, 0, len(elems))
+	for _, elem := range elems {
+		var l ethtypes.Log
+		if json.Unmarshal(elem, &l) == nil {
+			logs = append(logs, l)
+			continue
+		}
+
+		var probe struct {
+			Topics json.RawMessage `json:"topics"`
+		}
+		if json.Unmarshal(elem, &probe) != nil ||
+			(len(probe.Topics) != 0 && !bytes.Equal(probe.Topics, []byte("null"))) {
+			return nil, err
+		}
+	}
+
+	return logs, nil
+}
+
+func filterLogs(ctx context.Context, client *rpc.Client, q FilterQuery) ([]types.Log, error) {
+	fq := toEthereumFilterQuery(q)
+	arg := map[string]any{}
+	if len(fq.Addresses) > 0 {
+		arg["address"] = fq.Addresses
+	}
+	if len(fq.Topics) > 0 {
+		arg["topics"] = fq.Topics
+	}
+	if fq.BlockHash != nil {
+		arg["blockHash"] = fq.BlockHash
+	} else {
+		arg["fromBlock"], arg["toBlock"] = "latest", "latest"
+		if fq.FromBlock != nil {
+			arg["fromBlock"] = hexutil.EncodeBig(fq.FromBlock)
+		}
+		if fq.ToBlock != nil {
+			arg["toBlock"] = hexutil.EncodeBig(fq.ToBlock)
+		}
+	}
+
+	var raw json.RawMessage
+	if err := client.CallContext(ctx, &raw, "eth_getLogs", arg); err != nil {
+		return nil, err
+	}
+
+	logs, err := decodeLogs(raw)
 	if err != nil {
 		return nil, err
 	}
