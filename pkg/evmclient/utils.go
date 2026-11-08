@@ -1,9 +1,9 @@
 package evmclient
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
-	"regexp"
 
 	"github.com/KyberNetwork/evmlistener/pkg/common"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
@@ -14,9 +14,40 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-// nullTopics matches `"topics": null`, which some nodes (e.g. Conduit on elysium) return for
-// topic-less logs. go-ethereum's types.Log marks topics as required and rejects the response.
-var nullTopics = regexp.MustCompile(`"topics"\s*:\s*null`) // nolint: gochecknoglobals
+// decodeLogs decodes an eth_getLogs result. Some nodes (e.g. Conduit on elysium) return
+// `"topics": null` for topic-less logs, which types.Log rejects. On error, retry per element
+// and drop only logs whose topics are absent/null; any other failure is returned unchanged.
+func decodeLogs(raw json.RawMessage) ([]ethtypes.Log, error) {
+	var logs []ethtypes.Log
+	err := json.Unmarshal(raw, &logs)
+	if err == nil {
+		return logs, nil
+	}
+
+	var elems []json.RawMessage
+	if json.Unmarshal(raw, &elems) != nil {
+		return nil, err
+	}
+
+	logs = make([]ethtypes.Log, 0, len(elems))
+	for _, elem := range elems {
+		var l ethtypes.Log
+		if json.Unmarshal(elem, &l) == nil {
+			logs = append(logs, l)
+			continue
+		}
+
+		var probe struct {
+			Topics json.RawMessage `json:"topics"`
+		}
+		if json.Unmarshal(elem, &probe) != nil ||
+			(len(probe.Topics) != 0 && !bytes.Equal(probe.Topics, []byte("null"))) {
+			return nil, err
+		}
+	}
+
+	return logs, nil
+}
 
 func filterLogs(ctx context.Context, client *rpc.Client, q FilterQuery) ([]types.Log, error) {
 	fq := toEthereumFilterQuery(q)
@@ -44,8 +75,8 @@ func filterLogs(ctx context.Context, client *rpc.Client, q FilterQuery) ([]types
 		return nil, err
 	}
 
-	var logs []ethtypes.Log
-	if err := json.Unmarshal(nullTopics.ReplaceAll(raw, []byte(`"topics":[]`)), &logs); err != nil {
+	logs, err := decodeLogs(raw)
+	if err != nil {
 		return nil, err
 	}
 
