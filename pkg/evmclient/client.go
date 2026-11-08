@@ -40,6 +40,7 @@ type IClient interface {
 }
 
 type Client struct {
+	rpcClient    *rpc.Client
 	ethClient    *ethclient.Client
 	customClient *commonclient.Client
 }
@@ -51,6 +52,7 @@ func DialContext(ctx context.Context, rawurl string, httpClient *http.Client) (*
 	if err != nil {
 		return nil, err
 	}
+	client.rpcClient = rpcClient
 	ethClient := ethclient.NewClient(rpcClient)
 
 	switch {
@@ -157,12 +159,7 @@ func (c *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) 
 }
 
 func (c *Client) FilterLogs(ctx context.Context, q FilterQuery) ([]types.Log, error) {
-	switch {
-	case c.customClient != nil:
-		return filterLogs(ctx, c.customClient, q)
-	default:
-		return filterLogs(ctx, c.ethClient, q)
-	}
+	return filterLogs(ctx, c.rpcClient, q)
 }
 
 func (c *Client) HeaderByHash(ctx context.Context, hash string) (*types.Header, error) {

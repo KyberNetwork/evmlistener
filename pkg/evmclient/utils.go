@@ -2,17 +2,50 @@ package evmclient
 
 import (
 	"context"
+	"encoding/json"
+	"regexp"
 
 	"github.com/KyberNetwork/evmlistener/pkg/common"
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
-func filterLogs(ctx context.Context, client ethereum.LogFilterer, q FilterQuery) ([]types.Log, error) {
-	logs, err := client.FilterLogs(ctx, toEthereumFilterQuery(q))
-	if err != nil {
+// nullTopics matches `"topics": null`, which some nodes (e.g. Conduit on elysium) return for
+// topic-less logs. go-ethereum's types.Log marks topics as required and rejects the response.
+var nullTopics = regexp.MustCompile(`"topics"\s*:\s*null`) // nolint: gochecknoglobals
+
+func filterLogs(ctx context.Context, client *rpc.Client, q FilterQuery) ([]types.Log, error) {
+	fq := toEthereumFilterQuery(q)
+	arg := map[string]any{}
+	if len(fq.Addresses) > 0 {
+		arg["address"] = fq.Addresses
+	}
+	if len(fq.Topics) > 0 {
+		arg["topics"] = fq.Topics
+	}
+	if fq.BlockHash != nil {
+		arg["blockHash"] = fq.BlockHash
+	} else {
+		arg["fromBlock"], arg["toBlock"] = "latest", "latest"
+		if fq.FromBlock != nil {
+			arg["fromBlock"] = hexutil.EncodeBig(fq.FromBlock)
+		}
+		if fq.ToBlock != nil {
+			arg["toBlock"] = hexutil.EncodeBig(fq.ToBlock)
+		}
+	}
+
+	var raw json.RawMessage
+	if err := client.CallContext(ctx, &raw, "eth_getLogs", arg); err != nil {
+		return nil, err
+	}
+
+	var logs []ethtypes.Log
+	if err := json.Unmarshal(nullTopics.ReplaceAll(raw, []byte(`"topics":[]`)), &logs); err != nil {
 		return nil, err
 	}
 
